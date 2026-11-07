@@ -1,7 +1,7 @@
 # 公众号兼容性修复 · 验收基线
 
 > 生成时间：2026-11-07 15:37（commit `857e807`）
-> 验证工具：`tools_sandbox_verify.js`（模拟公众号编辑器的清洗规则 → 渲染 → 量化）、`tools_verify.js`（22 项独立断言）
+> 验证工具：`tools_sandbox_verify.js`（模拟公众号编辑器的清洗规则 → 渲染 → 量化）、`tools_verify.js`（24 项独立断言）
 
 ## 公众号编辑器的限制（依据）
 

@@ -12,7 +12,7 @@
 | `wecom_div_to_section.py` | 兼容层：把 `div`/`figure`/`figcaption` 换成公众号白名单内的 `section`/`p` |
 | `wecom_style_fallback.py` | 兼容层：flex→block、渐变→实色、阴影→边框、absolute→inline-block |
 | `tools_sandbox_verify.js` | 验收工具：模拟公众号清洗规则并渲染，量化格式保留度 |
-| `tools_verify.js` | 验收工具：22 项断言，校验「公众号不认的东西清干净、该留的留住了」 |
+| `tools_verify.js` | 验收工具：24 项断言，校验「公众号不认的东西清干净、该留的留住了」 |
 | `WECOM_COMPAT.md` | 公众号编辑器限制清单 + 修复前后基线数据 |
 | `assets/` | 21 张标注截图 + 6 个 GIF 案例 |
 | `cover.html` | 封面备选 |
@@ -135,7 +135,7 @@ python make-wechat.py \
 本地验收：
 
 ```bash
-node tools_verify.js          # 22 项断言
+node tools_verify.js          # 24 项断言
 node tools_sandbox_verify.js  # 模拟公众号渲染并截图
 ```
 
@@ -179,13 +179,38 @@ purge 文件路径刷不掉这个映射（实测 purge 返回 200，但文件仍
 https://cdn.jsdelivr.net/gh/newbaisays-aigc/wechat-knowledge-animation@<commit-sha>/wechat.html
 ```
 
-最新修复版本（结构降级 + 灰底修复 + 格式保留）：
+最新修复版本（结构降级 + 灰底修复 + 格式保留 + 图片路径修复）：
 
 ```
-https://cdn.jsdelivr.net/gh/newbaisays-aigc/wechat-knowledge-animation@857e807f9cc9594d153a6f878f7c766754a83d34/wechat.html
+https://cdn.jsdelivr.net/gh/newbaisays-aigc/wechat-knowledge-animation@7c84efe0c838c5192b6588dd17a12249864a8869/wechat.html
 ```
 
 本地文件 `wechat.html` 不受缓存影响，跑一次 `make-wechat.py` 就是最新版。
+
+### ⚠️ `--base` 是「仓库根 URL」，别带 `/assets`
+
+脚本会自动在 `--base` 后面拼上源码里自带的 `assets/`。如果 `--base` 末尾又带了 `/assets`，
+路径会变成 `assets/assets/xxx.png` —— **线上 21 张图全部 404，而且肉眼看源码完全发现不了**。
+
+```bash
+# ✓ 正确
+python make-wechat.py --base \
+  https://cdn.jsdelivr.net/gh/newbaisays-aigc/wechat-knowledge-animation@master
+
+# ✗ 错误（现在脚本会自动纠正，但别指望）
+python make-wechat.py --base \
+  https://cdn.jsdelivr.net/gh/newbaisays-aigc/wechat-knowledge-animation@master/assets
+```
+
+现在 `make-wechat.py` 有三重保护：
+
+| 保护 | 行为 |
+|---|---|
+| `--base` 末尾的 `/assets` | 自动去掉并打印提示 |
+| 拼接后再扫一遍 | 出现 `assets/assets/` 立即纠正 |
+| 生成后自检 | 路径无重复目录段 **且** 本地 `assets/` 下文件必须真实存在，否则退出码 1 |
+
+`tools_verify.js` 也有对应断言（㉓ ㉔），共 **24 项**。
 
 ## 关于体积
 
