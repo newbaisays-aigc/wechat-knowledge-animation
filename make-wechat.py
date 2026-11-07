@@ -17,6 +17,8 @@
   5. 绝对定位的编号圆点改成 flex 排布（公众号里 absolute 会错位）
   6. 去掉 <script>、<button> 改 <span>、内部锚点改 <span>
   7. 图片 src 加 --base 公网前缀
+  8. 在正文顶部插入一条「公众号粘贴版」工具条（含一键复制 / 全选正文按钮）
+     —— 工具条在 <article> 之外，复制时不会被带进正文
 
 用法：
     python make-wechat.py                      # 本地相对路径，浏览器打开人工核对
@@ -205,6 +207,113 @@ def rewrite(soup):
             el['style'] = merge_style(cur, 'box-sizing:border-box')
 
 
+# ---------------------------------------------------------------- toolbar
+# 顶部工具条：在 <article> 之外，复制时不会被带进正文。
+# 复制按钮走 Range + execCommand('copy')，保留富文本格式和图片地址；
+# 同时监听全局 copy 事件，防止用户按 Ctrl+A 时把工具条本身复制进去。
+TOOLBAR_HTML = '''
+<div id="wx-toolbar" style="position:sticky;top:0;z-index:9999;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 16px;background:#ffffff;border-bottom:1px solid #e3e9e4;box-shadow:0 2px 10px rgba(29,41,37,.05);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;font-size:13px;line-height:1.5;color:#1d2925;">
+  <span style="display:inline-flex;align-items:center;gap:6px;font-weight:700;color:#2f7058;white-space:nowrap;">📋 公众号粘贴版</span>
+  <button id="wx-copy" type="button" style="box-sizing:border-box;appearance:none;border:0;border-radius:7px;padding:8px 14px;background:#2f7058;color:#ffffff;font-family:inherit;font-size:13px;font-weight:700;line-height:1.5;cursor:pointer;">复制全文</button>
+  <button id="wx-select" type="button" style="box-sizing:border-box;appearance:none;border:1px solid #b9d4c8;border-radius:7px;padding:7px 13px;background:#f3faf6;color:#2f7058;font-family:inherit;font-size:13px;font-weight:700;line-height:1.5;cursor:pointer;">全选正文</button>
+  <span style="color:#6b7a74;font-size:12px;">复制后到公众号编辑器里直接粘贴，图片会自动上传</span>
+</div>
+'''
+
+TOOLBAR_SCRIPT = '''
+<script>
+(function () {
+  var TOOLBAR = document.getElementById('wx-toolbar');
+  var ART = document.querySelector('article');
+  if (!TOOLBAR || !ART) { return; }
+
+  var locked = false;
+
+  function toast(msg) {
+    var t = document.getElementById('wx-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'wx-toast';
+      t.setAttribute('style', 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);' +
+        'z-index:10000;box-sizing:border-box;padding:10px 18px;border-radius:8px;' +
+        'background:rgba(24,60,48,.94);color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,' +
+        "'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;font-size:13px;font-weight:600;" +
+        'box-shadow:0 6px 24px rgba(0,0,0,.18);opacity:0;transition:opacity .2s;pointer-events:none;');
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.style.opacity = '0'; }, 2200);
+  }
+
+  function selectArticle() {
+    var r = document.createRange();
+    r.selectNodeContents(ART);
+    var s = window.getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+    return r;
+  }
+
+  // 主按钮：直接把正文富文本写进剪贴板（含图片地址），粘贴到公众号即带样式
+  document.getElementById('wx-copy').addEventListener('click', function () {
+    selectArticle();
+    var ok = false;
+    locked = true;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    locked = false;
+    if (ok) {
+      toast('全文已复制，去公众号编辑器粘贴吧');
+    } else {
+      window.getSelection().removeAllRanges();
+      selectArticle();
+      toast('已全选正文，按 Ctrl+C / ⌘+C 复制');
+    }
+  });
+
+  // 备用按钮：只做高亮选中，用户自己按 Ctrl+C
+  document.getElementById('wx-select').addEventListener('click', function () {
+    selectArticle();
+    toast('已全选正文，按 Ctrl+C / ⌘+C 复制');
+  });
+
+  // 兜底：用户按 Ctrl+A 时，选区会包含工具条 —— 拦截 copy 事件，
+  // 把剪贴板内容改写为纯正文，工具条不会混进公众号文章里
+  document.addEventListener('copy', function (e) {
+    if (locked) { return; }
+    var s = window.getSelection();
+    if (!s || !s.rangeCount) { return; }
+    var range = s.getRangeAt(0);
+    var inside = TOOLBAR.contains(range.commonAncestorContainer);
+    var crosses = false;
+    try { crosses = range.intersectsNode(TOOLBAR); } catch (err) { }
+    if (!inside && !crosses) { return; }
+    var dt = e.clipboardData;
+    if (!dt) { return; }
+    dt.setData('text/html', ART.outerHTML);
+    dt.setData('text/plain', ART.innerText);
+    e.preventDefault();
+  });
+})();
+</script>
+'''
+
+
+def inject_toolbar(soup):
+    """把工具条插到 <article> 之前，脚本追加到 body 末尾。"""
+    body = soup.body
+    if body is None:
+        return
+    frag = BeautifulSoup(TOOLBAR_HTML, 'lxml')
+    toolbar = frag.find(id='wx-toolbar')
+    if toolbar is not None:
+        body.insert(0, toolbar)
+    script = BeautifulSoup(TOOLBAR_SCRIPT, 'lxml').find('script')
+    if script is not None:
+        body.append(script)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--base', default='', help='图片公网前缀，如 https://xxx')
@@ -215,6 +324,7 @@ def main():
     soup = BeautifulSoup(html, 'lxml')
     inline_styles(soup)
     rewrite(soup)
+    inject_toolbar(soup)
 
     if args.base:
         base = args.base.rstrip('/') + '/'
