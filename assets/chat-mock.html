@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #fff; font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif; color: #1f2328; }
+  .stack { display: flex; flex-direction: column; gap: 40px; padding: 20px; }
+  .panel { width: 660px; border: 1px solid #e6e3df; border-radius: 16px; background: #fbfbfa; padding: 26px 22px 24px; }
+  .head { display: flex; align-items: center; gap: 9px; padding: 0 4px 18px; border-bottom: 1px solid #edeae6; margin-bottom: 20px; }
+  .head b { font-size: 19px; }
+  .head span { font-size: 14px; color: #a3a09b; }
+
+  .row { display: flex; gap: 12px; margin-bottom: 18px; }
+  .row.me { flex-direction: row-reverse; }
+  .ava { width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+  .ava.wb { background: #1f2328; color: #fff; }
+  .ava.me { background: #dbe9e1; color: #2f7058; }
+  .msg { max-width: 470px; padding: 16px 18px; border-radius: 14px; font-size: 18px; line-height: 1.75; }
+  .msg.ai { background: #fff; border: 1px solid #e9e6e2; color: #33312e; }
+  .msg.user { background: #e9f3ed; color: #235945; }
+  .msg .url { display: block; margin-bottom: 6px; color: #1f6b4e; font-weight: 600; word-break: normal; overflow-wrap: normal; font-size: 15.5px; }
+  .msg ul { margin: 8px 0 0; padding-left: 0; list-style: none; }
+  .msg li { position: relative; padding-left: 16px; margin: 5px 0; font-size: 17px; color: #4a4844; }
+  .msg li:before { content: ""; position: absolute; left: 2px; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: #4da783; }
+  .msg .t { font-weight: 700; color: #23211e; }
+  .msg .dim { color: #7d7a75; font-size: 15.5px; }
+  .msg .tagline { display: inline-block; margin-top: 8px; padding: 3px 9px; border-radius: 6px; background: #eef7f2; color: #2f7058; font-size: 15px; }
+  .msg .file { display: inline-block; margin-top: 8px; padding: 4px 11px; border: 1px solid #bcd9c9; border-radius: 8px; background: #ffffff; color: #1f6b4e; font-size: 15px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="stack">
+
+  <!-- 面板一：安装 -->
+  <section class="panel" id="p1">
+    <div class="head"><b>安装视频 Skill</b><span>对话示意</span></div>
+
+    <div class="row me">
+      <div class="ava me">我</div>
+      <div class="msg user">
+        <span class="url">https://github.com/<wbr>newbaisays-aigc/<wbr>knowledge-animation-video</span>
+        帮我安装这个skill，安装完之后完成自查，并给我反馈完成情况
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="ava wb">WB</div>
+      <div class="msg ai">
+        <span class="t">收到，我会自动检查并安装</span>
+        <ul>
+          <li>第一次安装需要一点时间，先不用着急</li>
+          <li>同步检查 Node.js、Python、FFmpeg，以及生成、剪辑视频要用的工具</li>
+          <li>缺什么，我会提示你</li>
+        </ul>
+        <span class="tagline">安装完成后，我会完成自查，并反馈完成情况</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 面板二：使用 -->
+  <section class="panel" id="p2">
+    <div class="head"><b>装好之后怎么用</b><span>对话示意</span></div>
+
+    <div class="row me">
+      <div class="ava me">我</div>
+      <div class="msg user">为我用knowledege视频skill，做一个解释欧拉公式的原理的动画，使用默认风格</div>
+    </div>
+
+    <div class="row">
+      <div class="ava wb">WB</div>
+      <div class="msg ai">
+        <span class="t">收到，我会使用默认风格制作</span>
+        <span class="tagline">帮你生成完整的动画视频</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 面板三：方法二 -->
+  <section class="panel" id="p3">
+    <div class="head"><b>方法二：口播稿和参考图</b><span>对话示意</span></div>
+
+    <div class="row me">
+      <div class="ava me">我</div>
+      <div class="msg user">用knowledege 视频skill，帮我做一个知识动画，我的口播稿/音频是，想要的风格参考这张图片，不要用默认风格</div>
+    </div>
+
+    <div class="row">
+      <div class="ava wb">WB</div>
+      <div class="msg ai">
+        <span class="t">收到，我会按你的素材来制作</span>
+        <span class="tagline">使用你的口播稿/音频，参考图片风格，不用默认风格</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 面板四：设计自己的风格 -->
+  <section class="panel" id="p4">
+    <div class="head"><b>设计自己的风格</b><span>对话示意</span></div>
+
+    <div class="row me">
+      <div class="ava me">我</div>
+      <div class="msg user">
+        帮我参考这个提示词结构，参考我给的素材设计一个新的风格【记得上传你选好的图片或者视频】
+        <span class="file">附件：风格参考图.png</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="ava wb">WB</div>
+      <div class="msg ai">
+        <span class="t">收到，我会按这份模板结构来做</span>
+        <ul>
+          <li>先分析你给的素材：主色、背景、质感、字体气质、构图</li>
+          <li>再按七块结构写完整模板：规格、风格、节奏、画面、音乐、工具、交付检查</li>
+        </ul>
+        <span class="tagline">做完这版，你就有自己的风格模板了</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

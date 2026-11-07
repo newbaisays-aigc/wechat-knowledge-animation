@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  html, body { width: 900px; height: 383px; margin: 0; overflow: hidden; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #153d31; color: #fff; }
+  .cover { position: relative; width: 900px; height: 383px; overflow: hidden; background: radial-gradient(circle at 83% 25%, #2b7158 0, transparent 34%), linear-gradient(125deg, #102f27 0%, #174638 62%, #1d5340 100%); }
+  .grid { position: absolute; inset: 0; opacity: .12; background-image: linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px); background-size: 42px 42px; }
+  .brand { position: absolute; top: 34px; left: 48px; color: #b9ddcf; font-size: 15px; font-weight: 700; letter-spacing: 2px; }
+  .tag { position: absolute; top: 84px; left: 48px; padding: 7px 12px; border: 1px solid #79bca2; border-radius: 5px; color: #d5f1e6; font-size: 15px; }
+  h1 { position: absolute; top: 132px; left: 46px; width: 600px; margin: 0; font-size: 39px; line-height: 1.35; letter-spacing: -1px; }
+  h1 span { color: #b9f28f; }
+  .sub { position: absolute; left: 48px; bottom: 36px; color: #c7ddd5; font-size: 16px; letter-spacing: .4px; }
+  .visual { position: absolute; right: 38px; top: 75px; width: 230px; height: 225px; border: 1px solid rgba(193,239,219,.35); border-radius: 20px; background: rgba(6,31,24,.3); box-shadow: 0 20px 50px rgba(0,0,0,.18); }
+  .bars { position: absolute; left: 28px; bottom: 35px; display: flex; align-items: end; gap: 13px; height: 115px; }
+  .bar { width: 24px; border-radius: 5px 5px 2px 2px; background: linear-gradient(#b9f28f,#54a87e); }
+  .line { position: absolute; left: 24px; top: 33px; width: 175px; height: 78px; }
+  .dot { position: absolute; width: 11px; height: 11px; border: 3px solid #e5ffd4; border-radius: 50%; background: #4ca77d; }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="grid"></div>
+  <div class="brand">小白姐姐工作室出品</div>
+  <div class="tag">v0.1.0 Beta · 公开测试包</div>
+  <h1>知识动画 Skill<br><span>6 套模板，让内容动起来</span></h1>
+  <div class="sub">WorkBuddy 安装 · 风格参考 · 分镜确认 · 逐镜头修改</div>
+  <div class="visual">
+    <svg class="line" viewBox="0 0 175 78" aria-hidden="true"><path d="M5 68 L40 54 L72 60 L110 24 L169 8" fill="none" stroke="#b9f28f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 68 L40 54 L72 60 L110 24 L169 8 L169 78 L5 78 Z" fill="rgba(185,242,143,.08)"/></svg>
+    <div class="bars"><div class="bar" style="height:38px"></div><div class="bar" style="height:60px"></div><div class="bar" style="height:82px"></div><div class="bar" style="height:110px"></div></div>
+    <div class="dot" style="right:31px;top:35px"></div>
+  </div>
+</div>
+</body>
+</html>
