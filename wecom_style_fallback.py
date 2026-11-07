@@ -50,7 +50,8 @@ HERE = Path(__file__).resolve().parent
 
 
 # ------------------------------------------------------------------ 开关
-STRIP_LETTER_SPACING = True      # 需求里把 letter-spacing 归到「无用计算值」，默认删
+STRIP_LETTER_SPACING = False     # 保留：原文用它做字距微调（.brand 1.5px 拉开、h1 -.4px 收紧），
+                                 # 删掉品牌行会明显变宽。公众号支持 letter-spacing。
 NORMALIZE_BACKGROUND = True      # 纯色 background 简写 → background-color（公众号更容易保留）
 
 
