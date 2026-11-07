@@ -42,6 +42,12 @@ const EXEC = 'D:/tools/remotion/browser/chrome-headless-shell/win64/chrome-headl
   // 每张图在本地 assets/ 下都能对上
   const localAllExist = missingLocal.length === 0 && srcs.length === 21;
 
+  // 图片必须独占一个段落：<p><img …></p>
+  const imgOwnParagraph = srcs.every((_, i) => {
+    const m = html.match(new RegExp('<p\\b[^>]*>\\s*<img\\b[^>]*src="' + srcs[i].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '"', 'i'));
+    return !!m;
+  });
+
   const checks = [
     ['① 无 div（会被降级丢样式）', !/<div\b/i.test(html)],
     ['② 无 figure / figcaption', !/<figure\b/i.test(html) && !/<figcaption\b/i.test(html)],
@@ -69,6 +75,12 @@ const EXEC = 'D:/tools/remotion/browser/chrome-headless-shell/win64/chrome-headl
     ['---', true],
     ['㉓ 图片路径无重复目录段（assets/assets/）', dupDir.length === 0],
     ['㉔ 每张图在本地 assets/ 下真实存在', localAllExist],
+    ['---', true],
+    // 段落边界：公众号只有 <p> 形成可靠边界，<section> 会被并进同一段
+    ['㉕ 无 section（不形成段落边界）', !/<section\b/i.test(html)],
+    ['㉖ 无嵌套 p（结构会被浏览器拆散）', !/<p\b[^>]*>(?:(?!<\/p>).)*<p\b/is.test(html)],
+    ['㉗ 无 font-family: inherit（会让整条 style 失效）', !/font-family:\s*inherit/i.test(html)],
+    ['㉘ 图片独占段落（<p><img></p>）', imgOwnParagraph],
   ];
 
   let pass = 0, fail = 0;

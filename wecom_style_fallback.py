@@ -525,6 +525,42 @@ _DISPLAY_MAP = {
 }
 _DISPLAY_KEEP = ('block', 'inline-block', 'inline', 'none')
 
+# 公众号的样式解析器对 ``inherit`` 这类关键字值很敏感：
+# 实测 ``font-family: inherit`` 的元素，整条 style 会被丢弃（连底色一起没）。
+# 所以统一换成具体字体栈。
+_FONT_STACK = ('-apple-system, BlinkMacSystemFont, "Segoe UI", '
+               '"PingFang SC", "Microsoft YaHei", sans-serif')
+
+# border 简写与 longhand 的先后：longhand 必须排在简写之后，否则被简写覆盖。
+# 例：``border: 0; border-left: 4px solid #2f7058`` —— 顺序反了绿色竖线就没了。
+_BORDER_LONGHAND = ('border-top', 'border-right', 'border-bottom', 'border-left')
+
+
+def _fix_font_family(decls):
+    """把 ``inherit`` / ``initial`` 这类关键字值换成具体字体栈。"""
+    value = decls.get('font-family')
+    if value is None:
+        return False
+    low = value.strip().lower()
+    if low in ('inherit', 'initial', 'unset', 'revert'):
+        decls['font-family'] = _FONT_STACK
+        return True
+    return False
+
+
+def _fix_border_order(decls):
+    """把 border 的 longhand 排到 ``border`` 简写之后，避免被简写覆盖。"""
+    if 'border' not in decls:
+        return False
+    changed = False
+    for key in _BORDER_LONGHAND:
+        if key in decls:
+            value = decls.pop(key)
+            decls[key] = value
+            changed = True
+    return changed
+
+
 
 def _is_br(node):
     return isinstance(node, Tag) and node.name == 'br'
@@ -875,6 +911,10 @@ def strip_unsupported(soup):
                 changed = True
         if STRIP_LETTER_SPACING and 'letter-spacing' in decls:
             del decls['letter-spacing']
+            changed = True
+        if _fix_font_family(decls):
+            changed = True
+        if _fix_border_order(decls):
             changed = True
         # text-indent 属于可用属性，保留；只有 0 值是冗余的才删
         indent = decls.get('text-indent')

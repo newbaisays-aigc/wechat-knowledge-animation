@@ -9,10 +9,11 @@
 | `index.html` | 文章原文（完整版，含脚本与复制按钮） |
 | `wechat.html` | **公众号粘贴版** —— 样式全内联、图片走 CDN 绝对地址，可直接全选复制进公众号编辑器 |
 | `make-wechat.py` | 从 `index.html` 生成 `wechat.html` 的转换器 |
-| `wecom_div_to_section.py` | 兼容层：把 `div`/`figure`/`figcaption` 换成公众号白名单内的 `section`/`p` |
-| `wecom_style_fallback.py` | 兼容层：flex→block、渐变→实色、阴影→边框、absolute→inline-block |
+| `wecom_flatten_blocks.py` | 兼容层：把所有视觉块压平成顶层 `<p>`（公众号只有 `<p>` 形成可靠段落边界） |
+| `wecom_style_fallback.py` | 兼容层：flex→block、渐变→实色、阴影→边框、absolute→inline-block、font-family:inherit→具体字体栈 |
+| `wecom_div_to_section.py` | 兼容层（旧，已被 `wecom_flatten_blocks.py` 取代，保留备查） |
 | `tools_sandbox_verify.js` | 验收工具：模拟公众号清洗规则并渲染，量化格式保留度 |
-| `tools_verify.js` | 验收工具：24 项断言，校验「公众号不认的东西清干净、该留的留住了」 |
+| `tools_verify.js` | 验收工具：28 项断言，校验「公众号不认的东西清干净、该留的留住了」 |
 | `WECOM_COMPAT.md` | 公众号编辑器限制清单 + 修复前后基线数据 |
 | `assets/` | 21 张标注截图 + 6 个 GIF 案例 |
 | `cover.html` | 封面备选 |
@@ -135,11 +136,44 @@ python make-wechat.py \
 本地验收：
 
 ```bash
-node tools_verify.js          # 24 项断言
+node tools_verify.js          # 28 项断言
 node tools_sandbox_verify.js  # 模拟公众号渲染并截图
 ```
 
 `tools_sandbox_verify.js` 会把剪贴板内容按公众号规则清洗一遍再渲染，所见即公众号里的效果。
+
+### 第二轮塌陷：`<section>` 也不行，段落被并成一段（已修复）
+
+第一轮修复把 `div` 换成 `section` 后，公众号里的**前半段**（流程卡片、提示框）正常了，
+但**第 3 步往后的提示词块、图片、图注全糊成一片连续文字**：
+
+```
+2方法二：给它你的口播稿，和参考图如果你有设计好的文稿、音频，以及想要的风格，也可以这样和它说：
+长按下方文字复制用knowledge视频skill，帮我做一个知识动画……A｜3D 据数据新闻、行业报告、财报、产品发布
+```
+
+逐字比对剪贴板载荷后，两个根因浮出来：
+
+| 根因 | 现象 | 修复 |
+|---|---|---|
+| **`<section>` 不形成可靠的段落边界** | 连续的 section 被并进同一个段落；`<section>` 内直接放 `<img>` 时，img 的 alt 文字被吐进正文，与图注连成一段 | 所有视觉块压平成**顶层 `<p>`**，`<p>` 内部只留行内内容；图片独占 `<p><img></p>`，图注是独立 `<p>` |
+| **`font-family: inherit` 让整条 style 失效** | 深绿底的 `.prompt` 块底色全丢、变成白底黑字（同一份 HTML 里浅绿底的 `.note` 却正常） | `inherit` / `initial` 一律换成具体字体栈 |
+
+社区实测也印证了第一条：「section 标签的 margin/padding 被重置」「多层嵌套全部塌缩成纯文本」。
+
+所以现在产物的规则是：
+
+* 顶层只有 `<p>` / `<h1-h6>` / `<ul>` / `<ol>` / `<blockquote>`，**一个 `<section>` 都不留**
+* `<p>` 里**不再嵌 `<p>`**（浏览器会自动拆散嵌套 p）
+* 图片独占一个段落：`<p><img …></p>`
+* 图注是紧跟其后的独立段落（浅灰 12px 居中）
+
+顺带修掉的两个隐蔽 bug：
+
+| bug | 现象 | 修复 |
+|---|---|---|
+| `border: 0` 排在 `border-left` 之后 | 「第 1 步」标题的绿色左边框竖线消失 | border 的 longhand 统一排到简写之后 |
+| `<img loading="lazy">` | 长文里视口外的案例 GIF 根本不发起请求 | 删除 `loading` / `decoding` 属性 |
 
 ### 公众号里的「复制」是长按
 

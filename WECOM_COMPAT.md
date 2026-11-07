@@ -11,10 +11,13 @@
 |---|---|
 | **稳定依赖标签** | `p` `span` `strong` `em` `ul` `ol` `li` `a` `img` `section` `blockquote` `h1`-`h6` `table` 系列 `hr` `sup` `sub` `u` `pre` `code` `br` |
 | **会降级（样式跟着丢）** | `div` `figure` `figcaption` 及复杂布局标签 |
+| **不形成可靠段落边界** | `section` —— 连续的 section 会被并进同一段；实测「section 的 margin/padding 被重置」 |
 | **不支持** | `script` `style` `iframe` `video` |
 | **会被清除** | `class` `id` `data-*` 属性 |
 | **样式子集** | 只认 `background-color`（**不认 `background` 简写**）、`color`、`font-*`、`line-height`、`text-align`、`margin*`、`padding*`、`border*`、`border-radius`、`display`（**不支持 flex/grid**）、`width`/`max-width`、`height`、`vertical-align`、`opacity` 等 |
 | **不支持的样式** | `background-image`（渐变）、`box-shadow`、`position:absolute`（会错位）、`transform` |
+| **会让整条 style 失效** | `font-family: inherit`（实测：元素连底色一起丢）、`font-family: initial` |
+| **嵌套规则** | `<p>` 里不能嵌 `<p>`（浏览器会自动拆散）；`<img>` 最好独占一段 `<p><img></p>` |
 
 ## 修复前基线（_stage1.html = 仅完成 div→section 转换）
 
@@ -116,3 +119,54 @@ inline_styles → rewrite → adapt_for_wechat → inject_toolbar → apply_weco
 
 `apply_wecom_compat` **必须最后执行**：工具条与「复制小提示」条是运行时插入的 `div`，提前转换会漏掉。
 工具条本身要保持 `display:flex`（按钮横排），所以在降级前先 `extract()` 出来，处理完再插回。
+
+
+---
+
+## 第二轮：`<section>` 也不行（commit 见仓库最新）
+
+### 现象
+
+第一轮把 `div` 换成 `section` 后，公众号里**前半段正常、后半段全糊**：
+
+```
+2方法二：给它你的口播稿……长按下方文字复制用knowledge视频skill，帮我做一个知识动画……
+A｜3D 据数据新闻、行业报告、财报、产品发布
+```
+
+多个提示词块、图注、`<img>` 的 alt 文字全部连成一段普通正文。
+
+### 根因（逐字比对剪贴板载荷得出）
+
+1. **`<section>` 不形成可靠的段落边界** —— 连续 section 被并进同一段；
+   section 内直接放 `<img>` 时，公众号把 img 的 **alt 文本吐进正文**，与后面的图注连成一段
+   （用户截图里「成片画面：…成片里的这一帧：…」正是 alt + figcaption 拼在一起）。
+2. **`font-family: inherit` 让整条 style 失效** —— 深绿底的 `.prompt` 底色全丢变成白底黑字，
+   而同一份 HTML 里浅绿底的 `.note` 正常，差异只有这一个属性。
+
+### 修复
+
+| 做法 | 说明 |
+|---|---|
+| 所有视觉块 → **顶层 `<p>`** | `<p>` 是公众号唯一可靠形成段落边界的块级元素 |
+| `<p>` 内只留行内内容 | 块级子元素提成兄弟节点，容器盒子样式迁移到第一个子块 |
+| 图片独占 `<p><img></p>` | 不让 img 和文字挤在同一段 |
+| 图注 = 独立 `<p>` | 浅灰 12px 居中，紧跟图片段落 |
+| `font-family: inherit` → 具体字体栈 | 避免整条 style 被丢弃 |
+| border longhand 排到简写后 | `border: 0` 会覆盖 `border-left` |
+| 删除 `loading` / `decoding` | `loading="lazy"` 会让视口外的 GIF 根本不请求 |
+
+### 验收（修复后）
+
+| 指标 | 数值 |
+|---|---|
+| `tools_verify.js` | **28 项断言全绿** |
+| 顶层 `<section>` / `<div>` / `<figure>` | **0** |
+| 嵌套 `<p>` | **0** |
+| 段落数 | 101 |
+| **塌陷段落** | **0** |
+| **粘连段落对**（相邻段无间距） | **0** |
+| 有底色段落 | 23 |
+| 步骤编号徽章 | 4 |
+| 图片 / 裂图 | 21 / **0** |
+| 文本长度 | 与原文一致，零丢失 |

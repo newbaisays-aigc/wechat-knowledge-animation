@@ -48,6 +48,23 @@ async function clean(html) {
       });
     }
 
+    // <section> 在公众号里不形成可靠的段落边界（会被并进同一段）。
+    // 沙盒把它降级成 <p>，并丢掉它的间距与盒子样式，模拟「section 的
+    // margin/padding 被重置」——这样一旦产物里又出现 section，指标会立刻塌。
+    root.querySelectorAll('section').forEach(el => {
+      const n = doc.createElement('p');
+      for (const a of Array.from(el.attributes)) {
+        if (a.name === 'style') continue;
+        n.setAttribute(a.name, a.value);
+      }
+      const keep = (el.getAttribute('style') || '').split(';')
+        .map(s => s.trim()).filter(Boolean)
+        .filter(d => !/^(margin|padding|border|background)/i.test(d.split(':')[0].trim()));
+      if (keep.length) n.setAttribute('style', keep.join('; '));
+      while (el.firstChild) n.appendChild(el.firstChild);
+      el.replaceWith(n);
+    });
+
     root.querySelectorAll('*').forEach(el => {
       el.removeAttribute('class');
       el.removeAttribute('id');
@@ -142,32 +159,47 @@ async function clean(html) {
   const p2 = await b2.newPage();
   await p2.setViewportSize({ width: 677, height: 1600 });
   await p2.goto('file:///D:/WorkBuddy/Claw/wechat-knowledge-animation/_sandbox.html', { waitUntil: 'load' });
-  await p2.waitForTimeout(1500);
+  // 等图片全部加载完（GIF 有 2MB 级的，固定 sleep 不够）
+  await p2.evaluate(() => Promise.all(
+    Array.from(document.images).map(i => i.complete ? null :
+      new Promise(res => { i.onload = i.onerror = res; setTimeout(res, 15000); }))
+  ));
+  await p2.waitForTimeout(600);
   await p2.screenshot({ path: 'D:/WorkBuddy/Claw/wechat-knowledge-animation/_sandbox_top.png', clip: { x:0, y:0, width:677, height:1600 } });
   await p2.screenshot({ path: 'D:/WorkBuddy/Claw/wechat-knowledge-animation/_sandbox_full.png', fullPage: true });
 
   const stats = await p2.evaluate(() => {
-    const secs = Array.from(document.querySelectorAll('section'));
-    const withBg = secs.filter(s => {
-      const b = getComputedStyle(s).backgroundColor;
+    const ps = Array.from(document.querySelectorAll('p'));
+    const withBg = ps.filter(p => {
+      const b = getComputedStyle(p).backgroundColor;
       return b && b !== 'rgba(0, 0, 0, 0)';
     });
-    const ps = Array.from(document.querySelectorAll('p'));
-    // 塌陷：一个 p 里塞了多个 section 或 img
-    const collapsed = ps.filter(p => p.querySelectorAll('section,img').length > 1).length;
+    // 塌陷：一个 p 里塞了多个 img，或 p 里还嵌着块级元素
+    const collapsed = ps.filter(p => p.querySelectorAll('img').length > 1
+                                      || p.querySelector('p,div,section,figure')).length;
+    // 段落边界被吞掉：相邻两个有文字的 p 之间没有任何间距
+    let merged = 0;
+    for (let i = 0; i < ps.length - 1; i++) {
+      const a = ps[i], b = ps[i + 1];
+      if (!a.getBoundingClientRect().height || !b.getBoundingClientRect().height) continue;
+      if (a.contains(b) || b.contains(a)) continue;
+      const gap = b.getBoundingClientRect().top - a.getBoundingClientRect().bottom;
+      if (gap < 4 && a.textContent.trim() && b.textContent.trim()) merged++;
+    }
     const uls = Array.from(document.querySelectorAll('ul'));
     const listStyle = uls.map(u => getComputedStyle(u).listStyleType);
-    // 圆点徽章是否还在（inline-block）
     const badges = Array.from(document.querySelectorAll('span')).filter(s => {
       const cs = getComputedStyle(s);
       return cs.display === 'inline-block' && parseFloat(cs.width) >= 20 && parseFloat(cs.width) <= 30;
     }).length;
+    const brokenImgs = Array.from(document.querySelectorAll('img')).filter(i => !i.complete || i.naturalWidth === 0).length;
     return {
       段落数: ps.length,
       塌陷段落: collapsed,
-      section数: secs.length,
-      有底色section: withBg.length,
+      粘连段落对: merged,
+      有底色段落: withBg.length,
       图片数: document.querySelectorAll('img').length,
+      裂图数: brokenImgs,
       列表: listStyle,
       徽章数: badges,
     };

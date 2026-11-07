@@ -33,7 +33,7 @@ from pathlib import Path
 
 from bs4 import BeautifulSoup, NavigableString
 
-from wecom_div_to_section import div_to_section
+from wecom_flatten_blocks import flatten_to_paragraphs
 from wecom_style_fallback import apply_all as apply_style_fallback
 
 HERE = Path(__file__).resolve().parent
@@ -194,6 +194,13 @@ def rewrite(soup):
         b.name = 'span'
         b.attrs.pop('type', None)
         b.attrs.pop('data-copy-text', None)
+
+    # 4b) 图片的 loading / decoding 属性要去掉。
+    #     lazy 会让视口外的图片（长文里的大半案例 GIF）根本不发起请求，
+    #     公众号与部分阅读器都可能出现「图裂了但地址是对的」的情况。
+    for img in soup.find_all('img'):
+        img.attrs.pop('loading', None)
+        img.attrs.pop('decoding', None)
 
     # 5) 去掉 script
     for sc in soup.find_all('script'):
@@ -423,15 +430,22 @@ def inject_toolbar(soup):
 def apply_wecom_compat(soup):
     """把正文降级成公众号编辑器能稳定渲染的内联样式。
 
-    公众号新版编辑器基于 ProseMirror，白名单里没有 div / figure / figcaption，
-    这些标签被降级时**连同身上的内联样式一起丢失** —— 于是所有靠容器承载
-    样式的卡片、提示框、网址卡、图注全部塌成连续文本。
+    公众号新版编辑器基于 ProseMirror，实测有三条硬伤：
 
-    这里做四件事：
-      1. div → section，figure → section，figcaption → p（白名单内的块级替代）
-      2. flex 布局降级为 block 流 + margin 间距（公众号不支持 flex/grid）
-      3. linear-gradient / box-shadow 降级为实色 / 边框
-      4. 清掉 absolute 定位等不支持的属性，编号徽章改 inline-block
+      1. ``<div>`` / ``<figure>`` / ``<figcaption>`` 会被降级，**连同内联样式一起丢失**
+         —— 所有靠容器承载样式的卡片、提示框、网址卡、图注全部塌成连续文本。
+      2. ``<section>`` 虽然在白名单里，但**不形成可靠的段落边界**：连续的 section
+         会被并进同一段，视觉上就是「卡片挤成一片文字」。社区实测同样提到
+         「section 的 margin/padding 被重置」。
+      3. ``<p>`` 才是公众号真正认的段落单元，段落边界与间距都稳定。
+
+    所以这里的策略是：**把所有视觉块都压平成顶层 ``<p>``，段落内部只留行内内容**，
+    完全不依赖容器承载样式。
+
+    执行顺序：
+      1. flex / 渐变 / 阴影 / absolute 等样式降级（在原结构上做，几何补偿才准）
+      2. div / figure → 顶层 p，图注独立成段，嵌套块级子元素拆平
+      3. 收拾列表圆点
 
     必须在 inject_toolbar 之后调用：工具条与提示条是运行时插入的，
     提前转换会漏掉。
@@ -443,8 +457,10 @@ def apply_wecom_compat(soup):
     if toolbar is not None:
         parked = toolbar.extract()
 
-    div_to_section(soup)
+    # 顺序关键：样式降级要在拆平之前 —— absolute 的几何补偿
+    # （父级 padding 让位 + 子元素负 margin 补偿）依赖原父子结构。
     apply_style_fallback(soup)
+    flatten_to_paragraphs(soup)
     fix_fit_list(soup)
 
     if parked is not None:
