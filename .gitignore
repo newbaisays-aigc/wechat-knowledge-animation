@@ -1,2 +1,4 @@
 __pycache__/
 *.pyc
+_sandbox*.html
+_sandbox*.png
