@@ -1,7 +1,7 @@
 # 公众号兼容性修复 · 验收基线
 
-> 生成时间：2026-11-07 15:30
-> 验证工具：`_sandbox.js`（模拟公众号编辑器的清洗规则 → 渲染 → 量化）
+> 生成时间：2026-11-07 15:37（commit `857e807`）
+> 验证工具：`tools_sandbox_verify.js`（模拟公众号编辑器的清洗规则 → 渲染 → 量化）、`tools_verify.js`（22 项独立断言）
 
 ## 公众号编辑器的限制（依据）
 
@@ -35,14 +35,33 @@
 
 ### 沙盒渲染层（= 公众号实际效果）
 
-| 指标 | 修复前 | 目标 | 说明 |
+| 指标 | 修复前 | 修复后 | 说明 |
 |---|---|---|---|
 | 段落数 | 65 | 65 | 不变 |
-| **有底色 section** | **0** | **> 30** | ⬅ 核心指标：卡片/提示框全无底色 |
+| **有底色 section** | **0** | **22** | ⬅ 核心指标：卡片/提示框全无底色 |
+| section 数 | 56 | 56 | 不变 |
 | 图片数 | 21 | 21 | 不变 |
-| **列表样式** | **none** | **disc** | ⬅ 列表项失去圆点，变成普通段落 |
-| **徽章数（inline-block）** | **0** | **> 0** | ⬅ 步骤编号圆点丢失 |
+| **列表样式** | none | none | ⬅ **保持 `none`**：圆点是自己画的，改成 `disc` 会出现双圆点 |
+| **徽章数（inline-block）** | **0** | **4** | ⬅ 步骤编号圆点恢复 |
 | 页面错误 | 无 | 无 | — |
+
+### 剪贴板层 · 修复后实测（线上 SHA 版本）
+
+| 指标 | 修复前 | 修复后 |
+|---|---|---|
+| `div` | 40 | **0**（正文内） |
+| `figure` / `figcaption` | 19 / 14 | **0 / 0** |
+| `background` 简写 | 62 | **0** |
+| `display:flex` | 11 | **0** |
+| `background-image`（渐变） | 8 | **0** |
+| `box-shadow` | 2 | **0** |
+| `position:absolute` | 7 | **0** |
+| 灰底 `rgb(243,245,242)` | 30 个段落 | **0** |
+| 步骤编号徽章 | 0 | **4** |
+| 绿圆点 `span` | 0 | **25** |
+
+> 注：线上整页仍能看到 1 个 `div`、1 个 `display:flex`、4 个 `background:`、2 个 `box-shadow` ——
+> 全部位于 `<article>` **之外**的顶部工具条与其内联 `<script>` 里，复制时不会进入公众号正文。
 
 ## 复现的塌陷现象（与用户截图一致）
 
@@ -60,13 +79,34 @@
 |---|---|---|
 | `div` 被降级 → 样式全丢 | `div` → `section` | `wecom_div_to_section.py` |
 | `figure` / `figcaption` 被降级 | `figure` → `section`，`figcaption` → `p`（图注独立成段） | `wecom_div_to_section.py` |
-| `display:flex` 无效 | 容器降为 `block`，`gap` 转 `margin` | `wecom_style_fallback.py` |
-| `background` 简写丢失 | 改写为 `background-color` | `wecom_style_fallback.py` |
+| `display:flex` 无效 | 容器降为 `block`，`gap` 转 `margin`（行内→右外边距，列/换行→下外边距） | `wecom_style_fallback.py` |
+| `background` 简写丢失 | 完整拆解为 `background-color` / `background-image` / `background-repeat` | `wecom_style_fallback.py` |
 | `linear-gradient` 丢失 | 实色化；`.hl` 用 `border-bottom` 补底线 | `wecom_style_fallback.py` |
 | `box-shadow` 丢失 | `.pick` 改 `border-bottom` | `wecom_style_fallback.py` |
-| `position:absolute` 错位 | 24px 编号徽章改 `inline-block` + `margin-right`；7px 空圆点 span 删除 | `wecom_style_fallback.py` |
-| 列表无圆点 | `list-style` 改 `disc`，`padding-left` 22px→8px | `wecom_style_fallback.py` |
+| `position:absolute` 错位 | 按特征组合分流（见下表） | `wecom_style_fallback.py` |
+| 列表缩进 / 双圆点 | `list-style` 保留 `none`，左内边距归 0，`padding` 压成一条 | `wecom_style_fallback.py` + `make-wechat.py` |
 | 灰底色块 | `article`/`body` 保持 `#ffffff`（上一轮已修） | `make-wechat.py` |
+
+### 绝对定位分流规则
+
+一刀切删掉 `position:absolute` 会连步骤编号一起弄丢。改成按**尺寸 + 是否有文字**判断用途，不依赖 class 名：
+
+| 特征 | 判定 | 处理 |
+|---|---|---|
+| 20~30px 见方 + 有文字 | 步骤编号徽章 | 保留圆形外观（宽高/圆角/底色/字色/行高），改 `inline-block` + `margin-right:8px` |
+| ≤10px 见方 + 无文字 | 列表绿圆点 | 保留 `#4da783` 圆点，改 `inline-block` + 右侧留白 11px |
+| 其余 | — | 退化为普通行内元素 |
+
+几何还原：父级 `padding-left` 让位给原本的绝对定位坐标，子元素用于抵消 padding 的负 `margin-left` 同步补偿 —— 文字既不重叠也不跑位。父级不再有绝对定位子元素时，其 `position:relative` 一并清理。
+
+### 列表收尾
+
+| 项 | 处理 | 原因 |
+|---|---|---|
+| `list-style` | **保留 `none`** | 圆点是自己画的，改成 `disc` 会出现双圆点 |
+| 列表左内边距 | 归 0 | 原生缩进会多出一截空白 |
+| 列表项 `padding` | 压成一条声明 | 避免 `padding` 与 `padding-left` 同时存在 |
+| `position:relative` | 清理 | 已无绝对定位子元素，不需要定位上下文 |
 
 ## 集成顺序（关键）
 

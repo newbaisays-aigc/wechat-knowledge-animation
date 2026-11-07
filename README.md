@@ -90,11 +90,34 @@ python make-wechat.py \
 | 问题 | 处理 |
 |---|---|
 | `div` / `figure` / `figcaption` 被降级 | 换成 `section` / `section` / `p`（图注因此独立成段） |
-| `display:flex` 无效 | 容器降为 `block`，`gap` 转 `margin` |
-| `background` 简写丢失 | 改写为 `background-color` |
+| `display:flex` 无效 | 容器降为 `block`，`gap` 转 `margin`（行内→右外边距，列/换行→下外边距，避免双倍间距） |
+| `background` 简写丢失 | 完整拆解为 `background-color` / `background-image` / `background-repeat` |
 | `linear-gradient` 丢失 | 实色化；`.hl` 高亮用 `border-bottom` 补出底线 |
 | `box-shadow` 丢失 | `.pick` 改用 `border-bottom` |
-| `position:absolute` 错位 | 24px 编号徽章改 `inline-block`；7px 空圆点改流内元素 |
+| `position:absolute` 错位 | 按特征组合分流：24px 编号徽章保留圆形外观改 `inline-block`；7px 空圆点保留绿点色 |
+
+### 绝对定位元素的分流规则
+
+一刀切删掉 `position:absolute` 会连步骤编号一起弄丢。改成按**尺寸 + 是否有文字**判断用途，不依赖 class 名：
+
+| 特征 | 判定 | 处理 |
+|---|---|---|
+| 20~30px 见方 + 有文字 | 步骤编号徽章 | 保留圆形外观（宽高/圆角/底色/字色/行高），改 `inline-block` + `margin-right:8px` |
+| ≤10px 见方 + 无文字 | 列表绿圆点 | 保留 `#4da783` 圆点，改 `inline-block` + 右侧留白 |
+| 其余 | — | 退化为普通行内元素 |
+
+几何还原：父级 `padding-left` 让位给原本的绝对定位坐标，子元素用于抵消 padding 的负 `margin-left` 同步补偿 —— 文字既不重叠也不跑位。
+
+### 列表的收尾
+
+圆点和徽章都是自己画的，列表不再需要原生缩进：
+
+| 项 | 处理 | 原因 |
+|---|---|---|
+| `list-style` | **保留 `none`** | 改成 `disc` 会变成双圆点 |
+| 列表左内边距 | 归 0 | 原生缩进会多出一截空白 |
+| 列表项 `padding` | 压成一条声明 | 避免 `padding` 与 `padding-left` 同时存在 |
+| `position:relative` | 清理 | 已无绝对定位子元素，不需要定位上下文 |
 
 降级顺序必须在 `inject_toolbar` **之后**——工具条与「复制小提示」条是运行时插入的，提前转换会漏掉；工具条本身要保留 `display:flex`（按钮横排），所以降级前先取出、处理完再放回。
 
@@ -144,6 +167,25 @@ https://cdn.jsdelivr.net/gh/newbaisays-aigc/wechat-knowledge-animation@master/as
 python make-wechat.py --base \
   https://cdn.jsdelivr.net/gh/newbaisays-aigc/wechat-knowledge-animation@<commit-sha>
 ```
+
+### ⚠️ `@master` 会被缓存 12 小时
+
+jsDelivr 对**分支名**（`@master`）会缓存「分支 → commit SHA」的映射，**最长 12 小时**。
+purge 文件路径刷不掉这个映射（实测 purge 返回 200，但文件仍是旧版）。
+
+所以线上取 `wechat.html` 请直接用 commit SHA：
+
+```
+https://cdn.jsdelivr.net/gh/newbaisays-aigc/wechat-knowledge-animation@<commit-sha>/wechat.html
+```
+
+最新修复版本（结构降级 + 灰底修复 + 格式保留）：
+
+```
+https://cdn.jsdelivr.net/gh/newbaisays-aigc/wechat-knowledge-animation@857e807f9cc9594d153a6f878f7c766754a83d34/wechat.html
+```
+
+本地文件 `wechat.html` 不受缓存影响，跑一次 `make-wechat.py` 就是最新版。
 
 ## 关于体积
 
