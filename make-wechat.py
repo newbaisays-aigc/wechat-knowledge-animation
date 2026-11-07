@@ -500,10 +500,43 @@ def main():
 
     if args.base:
         base = args.base.rstrip('/') + '/'
+        # 防呆：--base 是「仓库根 URL」，脚本会自动在后面拼 src 里自带的 assets/。
+        # 如果调用方习惯性地把 /assets 也写进 base，路径就会变成 assets/assets/xxx.png
+        # ——线上全部 404，而且肉眼看源码很难发现。这里直接把它抹掉。
+        if base.rstrip('/').endswith('/assets'):
+            base = base[:base.rstrip('/').rfind('/') + 1]
+            print('note: --base 末尾的 /assets 已自动去掉（避免路径变成 assets/assets/）')
         for img in soup.find_all('img'):
             src = img.get('src', '')
             if src and not src.startswith(('http', 'data:')):
-                img['src'] = base + src.lstrip('./')
+                new_src = base + src.lstrip('./')
+                # 双保险：拼接后若出现 assets/assets/ 之类重复段，直接去掉重复的那段
+                while '/assets/assets/' in new_src:
+                    new_src = new_src.replace('/assets/assets/', '/assets/')
+                img['src'] = new_src
+
+    # 自检：图片路径里不能有重复目录段，且本地 assets/ 下必须真实存在该文件
+    bad = []
+    missing = []
+    for img in soup.find_all('img'):
+        src = img.get('src', '')
+        if '/assets/assets/' in src or src.endswith('/assets/'):
+            bad.append(src)
+            continue
+        # 剥掉查询串后，取 assets/ 之后的相对路径去本地核对
+        clean = src.split('?')[0].split('#')[0]
+        if '/assets/' in clean:
+            rel = clean.split('/assets/', 1)[1]
+            if not (SRC.parent / 'assets' / rel).exists():
+                missing.append(src)
+    if bad:
+        print('ERROR: 图片路径异常（目录段重复）→ %s' % bad[:3])
+        return 1
+    if missing:
+        print('ERROR: 以下图片在本地 assets/ 下不存在 → %s' % missing[:3])
+        return 1
+    print('自检通过 ✓ 图片路径无重复段，且 %d 个本地文件全部存在'
+          % len(soup.find_all('img')))
 
     out = soup.prettify()
     Path(args.out).write_text(out, encoding='utf-8')

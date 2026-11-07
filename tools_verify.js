@@ -29,6 +29,19 @@ const EXEC = 'D:/tools/remotion/browser/chrome-headless-shell/win64/chrome-headl
   const noChrome = !html.includes('我把「知识动画」做成了公开测试包')
                    && !html.includes('小白姐姐 · AI 实操教程 · 2026 年 11 月');
 
+  // 图片路径：不能出现重复目录段（assets/assets/），且对应本地文件必须存在
+  const srcs = [...html.matchAll(/<img\b[^>]*\bsrc="([^"]+)"/gi)].map(m => m[1]);
+  const dupDir = srcs.filter(s => /\/assets\/assets\//.test(s) || /\/assets\/$/.test(s));
+  const ROOT = 'D:/WorkBuddy/Claw/wechat-knowledge-animation';
+  const missingLocal = srcs.filter(s => {
+    const clean = s.split('?')[0].split('#')[0];
+    if (!/\/assets\//.test(clean)) return false;
+    const rel = clean.split('/assets/')[1];
+    return !fs.existsSync(path.join(ROOT, 'assets', rel));
+  });
+  // 每张图在本地 assets/ 下都能对上
+  const localAllExist = missingLocal.length === 0 && srcs.length === 21;
+
   const checks = [
     ['① 无 div（会被降级丢样式）', !/<div\b/i.test(html)],
     ['② 无 figure / figcaption', !/<figure\b/i.test(html) && !/<figcaption\b/i.test(html)],
@@ -53,6 +66,9 @@ const EXEC = 'D:/tools/remotion/browser/chrome-headless-shell/win64/chrome-headl
     ['⑳ 长按提示语保留', html.includes('长按下方文字复制') && html.includes('长按下方网址复制')],
     ['㉑ 提示词换行用 br 保留', (html.match(/<br\s*\/?>/gi)||[]).length > 0],
     ['㉒ 无 console/page 错误', errs.length === 0],
+    ['---', true],
+    ['㉓ 图片路径无重复目录段（assets/assets/）', dupDir.length === 0],
+    ['㉔ 每张图在本地 assets/ 下真实存在', localAllExist],
   ];
 
   let pass = 0, fail = 0;
