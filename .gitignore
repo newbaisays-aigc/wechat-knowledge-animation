@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 _sandbox*.html
 _sandbox*.png
+_verify_clip.html
