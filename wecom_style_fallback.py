@@ -18,7 +18,20 @@ wecom_style_fallback —— 微信公众号（公众平台图文编辑器）样�
   1. :func:`flatten_flex`        —— flex 布局降级成块级流（gap → margin）
   2. :func:`gradient_to_solid`   —— 渐变背景降级成实色（``.hl`` 高亮保留底线效果）
   3. :func:`strip_shadow`        —— 去掉阴影（``.pick`` 的 inset 下划线改成 border-bottom）
-  4. :func:`strip_unsupported`   —— 通用清理（定位 / pre-wrap / 无用计算属性）
+  4. :func:`strip_unsupported`   —— 通用清理（定位 / 列表缩进 / pre-wrap / background 简写 / 无用计算属性）
+
+``strip_unsupported`` 里额外处理的几件事：
+
+* **``background`` 简写 → ``background-color``**：公众号只认长属性，简写会被整个丢掉，
+  容器就变成没有底色的透明块（``background: transparent`` → ``background-color: transparent``，
+  ``background: none`` → 整条删掉，复合值 ``#fff url(a.png) no-repeat`` 会拆成三条）。
+* **absolute 定位按「特征组合」分流**（不依赖 class 名）：
+  20~30px 见方 + 有文字 → 步骤编号徽章（保留圆形外观，改 inline-block + margin-right:8px）；
+  ≤10px 见方 + 无文字 → 列表绿圆点（inline-block + margin-right）。
+  父级 ``padding-left`` 让位、子元素负 ``margin-left`` 同步补偿，文字不会重叠也不会跑位。
+* **列表收尾**：圆点 / 徽章是自己画的，列表不再需要原生缩进 →
+  列表和列表项的左内边距归 0、列表项 padding 压成一条声明、``position:relative`` 清掉；
+  ``list-style`` **保留原值**（保持 ``none``，改成 ``disc`` 会变成双圆点）。
 
 设计约束
 --------
@@ -158,16 +171,38 @@ def _side_value(decls, prefix, side):
     return '0'
 
 
+def _collapse_sides(vals):
+    """四边数值相同时收成一条，避免出现 'padding: 0 0 0 0px' 这种冗余写法。"""
+    parsed = [_len_to_px(v) for v in vals]
+    if all(p is not None for p in parsed) and len(set(parsed)) == 1:
+        return vals[0]
+    return ' '.join(vals)
+
+
 def _set_side(decls, prefix, index, value):
-    """index: 0=上 1=右 2=下 3=左。简写和 longhand 同步更新，谁生效都不冲突。"""
+    """index: 0=上 1=右 2=下 3=左。
+
+    简写和 longhand 同步更新，谁生效都不冲突；
+    原本没有 longhand 时只改简写，不额外造出重复声明。
+    """
     side = _SIDE_NAMES[index]
     longhand = '%s-%s' % (prefix, side)
     vals = [_side_value(decls, prefix, s) for s in _SIDE_NAMES]
     vals[index] = value
-    collapsed = vals[0] if len(set(vals)) == 1 else ' '.join(vals)
     if longhand in decls:
         decls[longhand] = value
-    decls[prefix] = collapsed
+    decls[prefix] = _collapse_sides(vals)
+    # 简写写在 longhand 后面时，longhand 变成冗余声明 → 删掉，避免同一属性写两遍
+    keys = list(decls.keys())
+    if longhand in decls and prefix in decls and keys.index(prefix) > keys.index(longhand):
+        del decls[longhand]
+
+
+def _set_padding_single(decls, value='0'):
+    """把 padding 归一成**一条**声明（顺手干掉重复的 longhand）。"""
+    for key in ('padding-top', 'padding-right', 'padding-bottom', 'padding-left'):
+        decls.pop(key, None)
+    decls['padding'] = value
 
 
 def _margin_px(decls, side):
@@ -466,7 +501,7 @@ _ABS_PROPS = ('position', 'top', 'left', 'right', 'bottom', 'z-index',
 
 _JUNK_PROPS = (
     'text-decoration-thickness', 'text-decoration-style', 'text-decoration-color',
-    'orphans', 'widows', 'text-indent', 'text-transform',
+    'orphans', 'widows', 'text-transform',
     'font-variant', 'font-variant-ligatures', 'font-variant-numeric',
     'font-variant-east-asian', 'font-variant-caps', 'font-variant-alternates',
     'font-variant-position',
@@ -584,8 +619,43 @@ def _convert_prewrap_breaks(el):
     return el
 
 
+BADGE_MARGIN_RIGHT = 8.0    # 步骤编号徽章右侧留白（px）
+
+
+def _classify_absolute(width, height, has_text):
+    """按**特征组合**（不依赖 class 名）判断 absolute 元素的用途。
+
+    * ``badge`` —— 20~30px 见方 + 有文字：步骤编号徽章，保留圆形外观
+    * ``dot``   —— ≤10px 见方 + 无文字：列表圆点（绿色小圆点）
+    * ``other`` —— 其余
+    """
+    if width is None or height is None:
+        return 'other'
+    if 20 <= width <= 30 and 20 <= height <= 30 and has_text:
+        return 'badge'
+    if width <= 10 and height <= 10 and not has_text:
+        return 'dot'
+    return 'other'
+
+
+def _has_absolute_descendant(tag):
+    for descendant in tag.find_all(True):
+        if descendant.get('style') and 'position:absolute' in descendant.get('style').replace(' ', ''):
+            return True
+    return False
+
+
 def _flatten_absolute(tag):
-    """``position:absolute`` 元素 → 普通流里的行内元素，并保留原来的横向位置。"""
+    """``position:absolute`` 元素 → 普通流里的行内元素（保留原有外观与横向位置）。
+
+    * 徽章（24px 圆 + 文字）：``display:inline-block`` + ``margin-right:8px``，
+      圆形外观（宽高/圆角/底色/字色/行高）全部保留；
+    * 列表圆点（7px 圆 + 无文字）：``display:inline-block`` + 右侧留白，
+      保留绿色圆点（比浏览器原生 disc 更贴近原稿）；
+    * 父级 ``padding-left`` 让位给原本的绝对定位坐标，子元素为抵消 padding
+      用的负 ``margin-left`` 同步补偿；父级不再有 absolute 子元素时，
+      它的 ``position:relative`` 也会删掉。
+    """
     decls = _style_of(tag)
     position = decls.get('position', '').strip().lower()
     if position not in ('absolute', 'fixed'):
@@ -593,6 +663,9 @@ def _flatten_absolute(tag):
 
     left = _len_to_px(decls.get('left'))
     width = _len_to_px(decls.get('width'))
+    height = _len_to_px(decls.get('height'))
+    has_text = bool(tag.get_text().strip())
+    kind = _classify_absolute(width, height, has_text)
 
     for prop in _ABS_PROPS:
         decls.pop(prop, None)
@@ -600,6 +673,10 @@ def _flatten_absolute(tag):
     display = decls.get('display', '').strip().lower()
     if display not in ('inline', 'inline-block', 'block'):
         decls['display'] = 'inline-block'
+
+    # 徽章：固定 8px 右侧留白，保证一定排在文字前面且不重叠
+    if kind == 'badge':
+        _set_side(decls, 'margin', 1, _fmt_px(BADGE_MARGIN_RIGHT))
 
     parent = tag.parent
     if parent is not None and isinstance(parent, Tag):
@@ -619,34 +696,125 @@ def _flatten_absolute(tag):
                     _set_style(child, child_decls)
             _set_style(parent, parent_decls)
 
-            # 圆点/徽章右侧留白，保证后续文字的起始位置不变
-            if width is not None:
+            # 圆点右侧留白（几何还原：文字起始位置与原稿一致）
+            if kind == 'dot' and width is not None:
                 spacer = padding_left - left - width
                 if spacer > 0:
                     _set_side(decls, 'margin', 1, _fmt_px(spacer))
 
+        # 父级已经没有 absolute 子元素了 → position:relative 没必要
+        if parent_decls.get('position', '').strip().lower() == 'relative':
+            if not _has_absolute_descendant(parent):
+                parent_decls.pop('position', None)
+                _set_style(parent, parent_decls)
+
     _set_style(tag, decls)
 
 
+_BG_REPEAT = ('repeat', 'repeat-x', 'repeat-y', 'no-repeat', 'space', 'round')
+_BG_ATTACHMENT = ('scroll', 'fixed', 'local')
+_BG_SIZE = ('cover', 'contain')
+_BG_POSITION = ('left', 'right', 'top', 'bottom', 'center')
+
+
 def _normalize_background(decls):
-    """纯色 ``background`` 简写 → ``background-color``（公众号更容易保留颜色）。"""
+    """``background`` 简写 → 公众号只认的长属性。
+
+    * ``background: #fff``        → ``background-color: #fff``
+    * ``background: transparent`` → ``background-color: transparent``
+    * ``background: none``        → 整条删掉
+    * ``background: #fff url(a.png) no-repeat``
+      → ``background-color: #fff`` + ``background-image: url(a.png)``
+        + ``background-repeat: no-repeat``（其余部分各自成条）
+    """
     raw = decls.get('background')
     if not raw:
         return
-    if 'url(' in raw.lower() or 'gradient(' in raw.lower():
-        return
-    parts = _split_top_level(raw, ' ')
+
+    tokens = [t for t in _split_top_level(raw, ' ') if t]
     color = None
-    for part in parts:
-        if not part:
+    image = None
+    repeat = None
+    attachment = None
+    size = None
+    position = []
+
+    for token in tokens:
+        low = token.lower()
+        if low.startswith('url(') or 'gradient(' in low:
+            image = token
+        elif low in _BG_REPEAT:
+            repeat = low
+        elif low in _BG_ATTACHMENT:
+            attachment = low
+        elif low in _BG_SIZE:
+            size = low
+        elif low in _BG_POSITION:
+            position.append(low)
+        elif low == 'none':
             continue
-        token = _first_color_token(part)
-        if token and not _DIRECTION_RE.match(part):
-            color = token
-            break
+        else:
+            candidate = _first_color_token(token)
+            if candidate and not _DIRECTION_RE.match(token):
+                color = candidate
+
     del decls['background']
-    if color and color.lower() != 'none':
+    if color:
         decls['background-color'] = color
+    if image:
+        decls['background-image'] = image
+    if repeat:
+        decls['background-repeat'] = repeat
+    if attachment:
+        decls['background-attachment'] = attachment
+    if size:
+        decls['background-size'] = size
+    if position:
+        decls['background-position'] = ' '.join(position)
+
+
+def _padding_zero_left(decls):
+    """把 padding 的**左边**归 0，其余三边保留，并压成一条声明。"""
+    vals = [_side_value(decls, 'padding', side) for side in _SIDE_NAMES]
+    vals[3] = '0'
+    _set_padding_single(decls, _collapse_sides(vals))
+
+
+def _cleanup_lists(soup):
+    """列表布局收尾。
+
+    * ``list-style:none`` 的列表：圆点 / 编号是我们自己画的（绿色圆点、圆形徽章），
+      不需要原生缩进 → 列表和列表项的左内边距归 0；
+      **``list-style`` 本身保留 ``none``**，改成 ``disc`` 会变成「双圆点」；
+    * 列表项的 padding 压成**一条**声明，不再出现重复的 longhand；
+    * 列表项上的 ``position:relative``（原本用来锚定 absolute 圆点）
+      在没有 absolute 子元素之后删掉；
+    * 列表项文字不会紧贴左边：圆点 / 徽章自带 ``margin-right``。
+    """
+    if soup is None:
+        return soup
+
+    for lst in soup.find_all(['ul', 'ol']):
+        decls = _style_of(lst)
+        list_style = (decls.get('list-style') or decls.get('list-style-type') or '').strip().lower()
+        if list_style == 'none':
+            _padding_zero_left(decls)
+            _set_style(lst, decls)
+
+        for li in lst.find_all('li'):
+            li_decls = _style_of(li)
+            changed = False
+            if any(key in li_decls for key in ('padding', 'padding-top', 'padding-right',
+                                               'padding-bottom', 'padding-left')):
+                _padding_zero_left(li_decls)
+                changed = True
+            if (li_decls.get('position', '').strip().lower() == 'relative'
+                    and not _has_absolute_descendant(li)):
+                li_decls.pop('position', None)
+                changed = True
+            if changed:
+                _set_style(li, li_decls)
+    return soup
 
 
 def strip_unsupported(soup):
@@ -682,6 +850,21 @@ def strip_unsupported(soup):
     for tag in soup.find_all(True):
         _flatten_absolute(tag)
 
+    # 2b) 列表收尾：缩进归 0、padding 压成一条、relative 清掉
+    _cleanup_lists(soup)
+
+    # 2c) 已经没有 absolute 子元素了，position:relative 也就没必要（公众号会丢）
+    for tag in soup.find_all(True):
+        decls = _style_of(tag)
+        if decls.get('position', '').strip().lower() != 'relative':
+            continue
+        if _has_absolute_descendant(tag):
+            continue
+        decls.pop('position', None)
+        for prop in ('top', 'left', 'right', 'bottom'):
+            decls.pop(prop, None)
+        _set_style(tag, decls)
+
     # 3) 无用属性 + display 归一化 + background 简写
     for tag in soup.find_all(True):
         decls = _style_of(tag)
@@ -692,6 +875,11 @@ def strip_unsupported(soup):
                 changed = True
         if STRIP_LETTER_SPACING and 'letter-spacing' in decls:
             del decls['letter-spacing']
+            changed = True
+        # text-indent 属于可用属性，保留；只有 0 值是冗余的才删
+        indent = decls.get('text-indent')
+        if indent is not None and not _len_to_px(indent):
+            del decls['text-indent']
             changed = True
         display = decls.get('display', '').strip().lower()
         if display and display not in _DISPLAY_KEEP:
@@ -732,11 +920,71 @@ FIXTURE_HTML = '''
 <p>高亮<span class="hl" style="background-color:#eaf6ef;background-image:linear-gradient(180deg, rgba(255,255,255,0) 76%, #dcefe4 76%)">重要的一句</span>结束</p>
 <p>选项<span class="pick" style="box-shadow:inset 0 -2px 0 #8fcdb0">可以</span></p>
 <ol class="substeps"><li style="position:relative;padding-left:36px"><span class="num" style="position:absolute;left:0;top:0;width:24px;height:24px;border-radius:50%">1</span><b style="display:block">标题</b><p style="margin:0 0 0 -36px">提示文字</p></li></ol>
+<ul class="fit" style="list-style:none;padding-left:22px">
+  <li style="position:relative;margin:8px 0;padding-left:22px"><span style="position:absolute;left:4px;top:11px;width:7px;height:7px;border-radius:50%;background:#4da783"></span>列表项文字</li>
+</ul>
 <div class="prompt" style="white-space:pre-wrap">第一行
 第二行
 
 第四行</div>
 '''
+
+
+def extra_assertions(soup, min_colored=1):
+    """额外断言：列表 / 徽章 / 底色 / 简写残留。"""
+    # 1) list-style 保留原值（不改 disc，避免双圆点）
+    for lst in soup.find_all(['ul', 'ol']):
+        decls = _style_of(lst)
+        assert decls.get('list-style', '').strip().lower() != 'disc', 'list-style 被改成了 disc'
+        assert decls.get('list-style-type', '').strip().lower() != 'disc', 'list-style-type 被改成了 disc'
+
+    # 2) 列表 / 列表项的左内边距归 0，padding 只留一条声明
+    for lst in soup.find_all(['ul', 'ol']):
+        decls = _style_of(lst)
+        assert not _len_to_px(_side_value(decls, 'padding', 'left')), '列表左内边距没归 0'
+        for li in lst.find_all('li'):
+            li_decls = _style_of(li)
+            for key in ('padding-left', 'padding-top', 'padding-right', 'padding-bottom'):
+                assert key not in li_decls, '列表项还有重复的 %s 声明' % key
+            assert not _len_to_px(_side_value(li_decls, 'padding', 'left')), '列表项左内边距没归 0'
+            assert li_decls.get('position', '').strip().lower() != 'relative', '列表项还留着 position:relative'
+
+    # 3) 24px 左右的圆形徽章：inline-block + margin-right
+    badges = 0
+    for tag in soup.find_all(True):
+        decls = _style_of(tag)
+        width = _len_to_px(decls.get('width'))
+        height = _len_to_px(decls.get('height'))
+        if (width and height and 20 <= width <= 30 and 20 <= height <= 30
+                and tag.get_text().strip()):
+            badges += 1
+            assert decls.get('display', '').strip().lower() == 'inline-block', '徽章没有 inline-block'
+            assert (_margin_px(decls, 'right') or 0) > 0, '徽章没有 margin-right'
+    assert badges > 0, '一个徽章都没找到'
+
+    # 4) 不存在 absolute / fixed 的小装饰空元素
+    for tag in soup.find_all(True):
+        decls = _style_of(tag)
+        if decls.get('position', '').strip().lower() in ('absolute', 'fixed'):
+            width = _len_to_px(decls.get('width'))
+            height = _len_to_px(decls.get('height'))
+            assert not (width and height and width <= 10 and height <= 10
+                        and not tag.get_text().strip()), '还有 absolute 的空装饰小元素'
+
+    # 5) 没有 background 简写 / background-image 残留
+    for tag in soup.find_all(True):
+        decls = _style_of(tag)
+        assert 'background' not in decls, '还有 background 简写'
+        assert 'background-image' not in decls, '还有 background-image'
+
+    # 6) 带底色（background-color 非 transparent）的元素数量
+    colored = 0
+    for tag in soup.find_all(True):
+        value = _style_of(tag).get('background-color', '').strip().lower()
+        if value and value != 'transparent':
+            colored += 1
+    assert colored >= min_colored, '带底色的元素太少：%d（要求 ≥%d）' % (colored, min_colored)
+    return colored
 
 
 def fixture_test():
@@ -775,16 +1023,33 @@ def fixture_test():
     num_style = _style_of(num)
     assert num_style.get('display') == 'inline-block', 'fixture：编号徽章没变成行内元素'
     assert 'position' not in num_style and 'left' not in num_style, 'fixture：定位属性没删干净'
-    assert _margin_px(num_style, 'right') == 12.0, 'fixture：编号徽章右侧留白不对'
+    assert _margin_px(num_style, 'right') == 8.0, 'fixture：编号徽章右侧留白不对'
 
     li = soup.select_one('.substeps li')
     assert _len_to_px(_side_value(_style_of(li), 'padding', 'left')) == 0.0, 'fixture：li 的 padding-left 没让位'
     tip = soup.select_one('.substeps li p')
     assert _len_to_px(_side_value(_style_of(tip), 'margin', 'left')) == 0.0, 'fixture：负 margin-left 没补偿'
 
+    fit_list = soup.select_one('ul.fit')
+    fit_decls = _style_of(fit_list)
+    assert fit_decls.get('list-style', '').strip().lower() == 'none', 'fixture：list-style 被改了'
+    assert not _len_to_px(_side_value(fit_decls, 'padding', 'left')), 'fixture：列表缩进没归 0'
+    fit_li = fit_list.find('li')
+    fit_li_decls = _style_of(fit_li)
+    assert 'padding-left' not in fit_li_decls, 'fixture：列表项还有重复的 padding-left'
+    assert not _len_to_px(_side_value(fit_li_decls, 'padding', 'left')), 'fixture：列表项缩进没归 0'
+    assert fit_li_decls.get('position', '').strip().lower() != 'relative', 'fixture：列表项还留着 relative'
+    dot = fit_li.find('span')
+    dot_decls = _style_of(dot)
+    assert dot_decls.get('display', '').strip().lower() == 'inline-block', 'fixture：圆点没变成行内元素'
+    assert _margin_px(dot_decls, 'right') == 11.0, 'fixture：圆点右侧留白不对'
+    assert dot_decls.get('background-color') == '#4da783', 'fixture：圆点颜色丢了'
+
     prompt = soup.select_one('.prompt')
     assert len(prompt.find_all('br')) == 3, 'fixture：提示词换行数不对（应为 3 个 br）'
     assert '\n' in prompt.get_text(), 'fixture：换行符被删了'
+
+    extra_assertions(soup, min_colored=1)
 
     # 幂等：再跑一遍不应该有变化
     length_after = len(soup.get_text())
@@ -906,6 +1171,10 @@ def self_test(path=None):
 
     # 回归样本：验证每个降级分支
     fixture_test()
+
+    # 真实文件的额外断言（列表 / 徽章 / 底色 / 简写残留）
+    colored = extra_assertions(soup, min_colored=30)
+    print('额外断言通过 ✓  带底色（background-color 非 transparent）元素 %d 个' % colored)
     print('回归样本（flex / 渐变 / 阴影 / 绝对定位 / pre-wrap）全部通过 ✓')
 
     print()
