@@ -33,6 +33,9 @@ from pathlib import Path
 
 from bs4 import BeautifulSoup, NavigableString
 
+from wecom_div_to_section import div_to_section
+from wecom_style_fallback import apply_all as apply_style_fallback
+
 HERE = Path(__file__).resolve().parent
 SRC = HERE / 'index.html'
 OUT = HERE / 'wechat.html'
@@ -417,6 +420,66 @@ def inject_toolbar(soup):
         body.append(script)
 
 
+def apply_wecom_compat(soup):
+    """把正文降级成公众号编辑器能稳定渲染的内联样式。
+
+    公众号新版编辑器基于 ProseMirror，白名单里没有 div / figure / figcaption，
+    这些标签被降级时**连同身上的内联样式一起丢失** —— 于是所有靠容器承载
+    样式的卡片、提示框、网址卡、图注全部塌成连续文本。
+
+    这里做四件事：
+      1. div → section，figure → section，figcaption → p（白名单内的块级替代）
+      2. flex 布局降级为 block 流 + margin 间距（公众号不支持 flex/grid）
+      3. linear-gradient / box-shadow 降级为实色 / 边框
+      4. 清掉 absolute 定位等不支持的属性，编号徽章改 inline-block
+
+    必须在 inject_toolbar 之后调用：工具条与提示条是运行时插入的，
+    提前转换会漏掉。
+    """
+    # 工具条要保持横排（按钮并排），不能被 flex 降级拆成竖排。
+    # 先把它挪出降级范围，处理完再放回去。
+    toolbar = soup.find(id='wx-toolbar')
+    parked = None
+    if toolbar is not None:
+        parked = toolbar.extract()
+
+    div_to_section(soup)
+    apply_style_fallback(soup)
+    fix_fit_list(soup)
+
+    if parked is not None:
+        body = soup.body
+        if body is not None:
+            body.insert(0, parked)
+
+
+def fix_fit_list(soup):
+    """收拾 ul.fit 列表的冗余缩进。
+
+    列表圆点原本靠 `li:before` 伪元素画（absolute 定位），降级后改成
+    inline-block 的真实圆点 span 参与正常流。此时：
+      - ul 上为旧 absolute 圆点预留的 padding-left: 22px 成了多余缩进
+      - li 上残留 position: relative（已无 absolute 子元素依赖它）
+      - li 的 padding 被写了两遍（padding-left 和 padding，后者覆盖前者）
+    """
+    for ul in soup.select('ul.fit'):
+        style = ul.get('style', '')
+        # 保留 list-style: none（我们要自己的绿色圆点，不要原生 disc 叠成双点）
+        style = re.sub(r'padding-left:\s*22px;?\s*', '', style)
+        style = re.sub(r'padding-left:\s*22px', 'padding-left: 0', style)
+        ul['style'] = style
+
+    for li in soup.select('ul.fit li'):
+        style = li.get('style', '')
+        style = re.sub(r'position:\s*relative;?\s*', '', style)
+        # 清掉重复的 padding 声明，保留最后一条
+        pads = re.findall(r'padding(?:-left)?:\s*[^;]+', style)
+        if len(pads) > 1:
+            style = re.sub(r'padding(?:-left)?:\s*[^;]+;?\s*', '', style)
+            style = merge_style(style, pads[-1].strip())
+        li['style'] = style
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--base', default='', help='图片公网前缀，如 https://xxx')
@@ -429,6 +492,11 @@ def main():
     rewrite(soup)
     adapt_for_wechat(soup)
     inject_toolbar(soup)
+
+    # ---- 公众号兼容性降级（必须在 inject_toolbar 之后）----
+    # 顺序很重要：工具条和「复制小提示」条都是运行时插入的 div，
+    # 放在 inject_toolbar 之前转换会漏掉它们。
+    apply_wecom_compat(soup)
 
     if args.base:
         base = args.base.rstrip('/') + '/'

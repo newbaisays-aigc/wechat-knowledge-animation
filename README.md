@@ -9,6 +9,11 @@
 | `index.html` | 文章原文（完整版，含脚本与复制按钮） |
 | `wechat.html` | **公众号粘贴版** —— 样式全内联、图片走 CDN 绝对地址，可直接全选复制进公众号编辑器 |
 | `make-wechat.py` | 从 `index.html` 生成 `wechat.html` 的转换器 |
+| `wecom_div_to_section.py` | 兼容层：把 `div`/`figure`/`figcaption` 换成公众号白名单内的 `section`/`p` |
+| `wecom_style_fallback.py` | 兼容层：flex→block、渐变→实色、阴影→边框、absolute→inline-block |
+| `tools_sandbox_verify.js` | 验收工具：模拟公众号清洗规则并渲染，量化格式保留度 |
+| `tools_verify.js` | 验收工具：22 项断言，校验「公众号不认的东西清干净、该留的留住了」 |
+| `WECOM_COMPAT.md` | 公众号编辑器限制清单 + 修复前后基线数据 |
 | `assets/` | 21 张标注截图 + 6 个 GIF 案例 |
 | `cover.html` | 封面备选 |
 
@@ -63,6 +68,55 @@ python make-wechat.py \
 | `.site` 网址卡 | `#f4faf7` |
 
 验证方式：把剪贴板里的 `text/html` 渲染进白底容器，统计段落实际背景色 —— 51 个段落中灰底段落 0 个。
+
+### 粘贴后块级结构塌陷？（已修复）
+
+粘贴后流程卡片挤成一行、提示框和网址卡没底色、图注黏进正文 —— 根因是**公众号编辑器白名单比想象的窄**，而非我们页面写错了。
+
+公众号新版编辑器底层是 ProseMirror，限制如下：
+
+| 类别 | 内容 |
+|---|---|
+| 稳定依赖标签 | `p` `span` `strong` `em` `ul` `ol` `li` `a` `img` `section` `blockquote` `h1`-`h6` `table` 系列 `hr` `sup` `sub` `u` `pre` `code` `br` |
+| **会降级（样式跟着丢）** | `div` `figure` `figcaption` |
+| 不支持 | `script` `style` `iframe` `video` |
+| 会被清除 | `class` `id` `data-*` |
+| 不支持样式 | `background` 简写（只认 `background-color`）、`background-image` 渐变、`box-shadow`、`display:flex`/`grid`、`position:absolute` |
+
+`div` 被降级成 `p` 时，**连同它身上的内联样式一起丢失** —— 所有靠容器承载样式的卡片、提示框、网址卡、图注就全塌成了连续文本。
+
+`make-wechat.py` 因此加了一道兼容降级（`apply_wecom_compat`）：
+
+| 问题 | 处理 |
+|---|---|
+| `div` / `figure` / `figcaption` 被降级 | 换成 `section` / `section` / `p`（图注因此独立成段） |
+| `display:flex` 无效 | 容器降为 `block`，`gap` 转 `margin` |
+| `background` 简写丢失 | 改写为 `background-color` |
+| `linear-gradient` 丢失 | 实色化；`.hl` 高亮用 `border-bottom` 补出底线 |
+| `box-shadow` 丢失 | `.pick` 改用 `border-bottom` |
+| `position:absolute` 错位 | 24px 编号徽章改 `inline-block`；7px 空圆点改流内元素 |
+
+降级顺序必须在 `inject_toolbar` **之后**——工具条与「复制小提示」条是运行时插入的，提前转换会漏掉；工具条本身要保留 `display:flex`（按钮横排），所以降级前先取出、处理完再放回。
+
+修复前后（`tools_sandbox_verify.js` 实测）：
+
+| 指标 | 修复前 | 修复后 |
+|---|---|---|
+| `background` 简写 | 62 | **0** |
+| `display:flex` | 11 | **0** |
+| 渐变 / 阴影 / absolute | 8 / 2 / 7 | **0 / 0 / 0** |
+| 有底色的容器 | **0** | **22** |
+| 步骤编号徽章 | **0** | **4** |
+| 灰底段落 | 30 | **0** |
+
+本地验收：
+
+```bash
+node tools_verify.js          # 22 项断言
+node tools_sandbox_verify.js  # 模拟公众号渲染并截图
+```
+
+`tools_sandbox_verify.js` 会把剪贴板内容按公众号规则清洗一遍再渲染，所见即公众号里的效果。
 
 ### 公众号里的「复制」是长按
 
