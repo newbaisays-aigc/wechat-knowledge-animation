@@ -197,10 +197,25 @@ def rewrite(soup):
         sc.decompose()
 
     # 6) body/article 宽度交给公众号容器
+    #    注意：article 背景必须留白（#ffffff），不能设 transparent。
+    #    设成 transparent 时，浏览器复制会把「透明底下的实际底色」= body 的灰底
+    #    #f3f5f2 写进剪贴板，传染给每一个透明的后代元素（实测 51 个 p 里有 30 个
+    #    被染上灰底），粘贴到公众号后每段都出现灰色色块。
     art = soup.find('article')
     if art:
         art['style'] = merge_style(art.get('style', ''),
-                                    'max-width:100%;margin:0;padding:0 4px;background:transparent')
+                                    'max-width:100%;margin:0;padding:0 4px;background:#ffffff')
+    body = soup.find('body')
+    if body:
+        body['style'] = merge_style(body.get('style', ''), 'background:#ffffff')
+
+    # 6b) 标记文章头部（品牌名 / 大标题 / 署名行）
+    #     公众号的标题、作者是独立输入框，正文里再粘一遍是重复的。
+    #     打上 data-wx-chrome 标记，工具条复制时会整块跳过。
+    if art:
+        for sel in ('.brand', 'h1', '.meta'):
+            for el in art.select(sel):
+                el['data-wx-chrome'] = '1'
 
     # 7) 每个元素统一 border-box
     for el in soup.find_all(True):
@@ -298,13 +313,50 @@ TOOLBAR_SCRIPT = '''
     t._timer = setTimeout(function () { t.style.opacity = '0'; }, 2200);
   }
 
+  // 只取正文：跳过 data-wx-chrome 标记的头部（品牌名 / 大标题 / 署名行），
+  // 公众号的标题和作者是独立输入框，粘进正文会重复。
+  function bodyNodes() {
+    var out = [];
+    for (var i = 0; i < ART.childNodes.length; i++) {
+      var n = ART.childNodes[i];
+      if (n.nodeType === 1 && n.getAttribute && n.getAttribute('data-wx-chrome')) { continue; }
+      if (n.nodeType === 3 && !String(n.nodeValue || '').trim()) { continue; }
+      out.push(n);
+    }
+    return out;
+  }
+
   function selectArticle() {
     var r = document.createRange();
-    r.selectNodeContents(ART);
+    var nodes = bodyNodes();
+    if (nodes.length) {
+      r.setStartBefore(nodes[0]);
+      r.setEndAfter(nodes[nodes.length - 1]);
+    } else {
+      r.selectNodeContents(ART);
+    }
     var s = window.getSelection();
     s.removeAllRanges();
     s.addRange(r);
     return r;
+  }
+
+  // 供 Ctrl+A 兜底用：正文 HTML（已去掉头部）
+  function bodyHTML() {
+    var nodes = bodyNodes();
+    var out = '';
+    for (var i = 0; i < nodes.length; i++) { out += nodes[i].outerHTML || ''; }
+    return out;
+  }
+
+  function bodyText() {
+    var nodes = bodyNodes();
+    var out = '';
+    for (var i = 0; i < nodes.length; i++) {
+      out += (nodes[i].innerText !== undefined ? nodes[i].innerText : nodes[i].textContent || '');
+      out += String.fromCharCode(10);   // 用 fromCharCode(10) 而不是换行转义：后者在 Python 三引号字符串里会被解析成真实换行，把 JS 字面量截断
+    }
+    return out;
   }
 
   // 主按钮：直接把正文富文本写进剪贴板（含图片地址），粘贴到公众号即带样式
@@ -342,8 +394,8 @@ TOOLBAR_SCRIPT = '''
     if (!inside && !crosses) { return; }
     var dt = e.clipboardData;
     if (!dt) { return; }
-    dt.setData('text/html', ART.outerHTML);
-    dt.setData('text/plain', ART.innerText);
+    dt.setData('text/html', bodyHTML());
+    dt.setData('text/plain', bodyText());
     e.preventDefault();
   });
 })();
