@@ -19,10 +19,21 @@
 python make-wechat.py \
   --base https://cdn.jsdelivr.net/gh/newbaisays-aigc/wechat-knowledge-animation@master
 
-# 2. 浏览器打开 wechat.html → 全选复制 → 粘贴进公众号编辑器
+# 2. 浏览器打开 wechat.html → 点顶部「复制全文」→ 粘贴进公众号编辑器
 ```
 
 图片走 `cdn.jsdelivr.net/gh/...` 而不是 `raw.githubusercontent.com`，因为后者在境内经常被卡断，微信抓图会失败。
+
+### 顶部的复制工具条
+
+`wechat.html` 顶部有一条固定工具条（`📋 公众号粘贴版`）：
+
+| 按钮 | 行为 |
+|---|---|
+| **复制全文** | 一键把正文富文本写进剪贴板（含 21 张 CDN 图片地址），粘到公众号即带样式和图片 |
+| **全选正文** | 只高亮选中正文，由你自己按 `Ctrl+C` / `⌘+C` |
+
+工具条放在 `<article>` **之外**，不会混进公众号正文。即使你按了 `Ctrl+A`，复制事件也会被拦截改写为纯正文。
 
 **如果换了图片**：jsDelivr 有 CDN 缓存，改完可能要等几分钟才刷新。急用可以清缓存：
 
