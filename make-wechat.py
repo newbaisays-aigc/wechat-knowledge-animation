@@ -17,7 +17,9 @@
   5. 绝对定位的编号圆点改成 flex 排布（公众号里 absolute 会错位）
   6. 去掉 <script>、<button> 改 <span>、内部锚点改 <span>
   7. 图片 src 加 --base 公网前缀
-  8. 在正文顶部插入一条「公众号粘贴版」工具条（含一键复制 / 全选正文按钮）
+  8. 公众号专属适配：复制标签改成「长按复制」，流程提示改掉「点击/点一下」的说法，
+     并在第一个提示词前加一条长按提示（Web 版保持原样，按钮仍然可点）
+  9. 在正文顶部插入一条「公众号粘贴版」工具条（含一键复制 / 全选正文按钮）
      —— 工具条在 <article> 之外，复制时不会被带进正文
 
 用法：
@@ -207,6 +209,55 @@ def rewrite(soup):
             el['style'] = merge_style(cur, 'box-sizing:border-box')
 
 
+# ---------------------------------------------------------------- wechat-only adaptation
+# 公众号里没有 JS：绿色「复制」标签变成不可点的静态文字，
+# 而且原文案（如「点一下就能复制」）在公众号里是假的，必须改掉。
+# 这些改法只作用于公众号版，index.html（Web 版）保持原样、按钮照常可点。
+
+WX_HINT_HTML = '''
+<div class="wx-hint" style="box-sizing:border-box;margin:16px 0 0;padding:13px 15px;border-radius:8px;
+  background:#eef7f2;color:#284b3e;font-size:13.5px;line-height:1.8;">
+  <strong style="font-weight:700;">复制小提示：</strong>公众号里没有可点的按钮，长按下面的提示词文字就能选中复制，粘到 WorkBuddy 的对话框直接用。
+</div>
+'''
+
+FLOW_TIP_WECHAT = '完整流程一共 3 步。文中的绿色标签，长按就能选中复制。'
+
+
+def adapt_for_wechat(soup):
+    """把「点击复制」的说法改成「长按复制」，并补一条长按提示。"""
+    # 1) 顶部流程提示：锚点不能跳、按钮不能点，两句话都得改
+    tip = soup.select_one('.flow-tip')
+    if tip is not None:
+        tip.string = FLOW_TIP_WECHAT
+
+    # 2) 提示词块里的绿标（display:block，在文字上方）→「长按下方文字复制」
+    for tag in soup.select('.prompt .copy-tag'):
+        tag.string = '长按下方文字复制'
+
+    # 3) 网址那处（绿标在「打开 WorkBuddy 官网」后面，网址在下一行）
+    for tag in soup.select('.site .copy-tag'):
+        tag.string = '长按下方网址复制'
+
+    # 4) 行内那处「复制这句话」（跟在高亮引语后面）
+    for tag in soup.select('p > .copy-tag'):
+        if not tag.find_parent(class_='prompt') and not tag.find_parent(class_='site'):
+            tag.string = '长按复制'
+
+    # 4b) 硬编码的「复制地址 + 这句话」按钮（index.html 里直接写的 button，
+    #     不是 JS 生成的，rewrite() 已把它降级成 span，同样点不动）
+    for btn in soup.select('.copy-btn'):
+        if btn.get_text(strip=True):
+            btn.string = '长按上面两行，分两次复制'
+
+    # 5) 第一个提示词块前面插一条长按提示
+    first_prompt = soup.select_one('.prompt')
+    if first_prompt is not None:
+        hint = BeautifulSoup(WX_HINT_HTML, 'lxml').find('div')
+        if hint is not None:
+            first_prompt.insert_before(hint)
+
+
 # ---------------------------------------------------------------- toolbar
 # 顶部工具条：在 <article> 之外，复制时不会被带进正文。
 # 复制按钮走 Range + execCommand('copy')，保留富文本格式和图片地址；
@@ -324,6 +375,7 @@ def main():
     soup = BeautifulSoup(html, 'lxml')
     inline_styles(soup)
     rewrite(soup)
+    adapt_for_wechat(soup)
     inject_toolbar(soup)
 
     if args.base:
