@@ -213,11 +213,10 @@ purge 文件路径刷不掉这个映射（实测 purge 返回 200，但文件仍
 https://cdn.jsdelivr.net/gh/newbaisays-aigc/wechat-knowledge-animation@<commit-sha>/wechat.html
 ```
 
-最新修复版本（结构降级 + 灰底修复 + 格式保留 + 图片路径修复）：
-
-```
-https://cdn.jsdelivr.net/gh/newbaisays-aigc/wechat-knowledge-animation@7c84efe0c838c5192b6588dd17a12249864a8869/wechat.html
-```
+> **但注意**：jsDelivr 返回的 HTML 是 `text/plain`，浏览器打开会显示成源码文本。
+> `wechat.html` 本身是给「打开本地文件 → 复制 → 粘进公众号」用的，
+> 用户不需要在浏览器里看它，所以取源码就够了。**要在浏览器里正常打开的页面请用 GitHub Pages**：
+> `https://newbaisays-aigc.github.io/wechat-knowledge-animation/wechat.html`
 
 本地文件 `wechat.html` 不受缓存影响，跑一次 `make-wechat.py` 就是最新版。
 
@@ -263,6 +262,20 @@ ffmpeg -i in.gif -vf "fps=8,scale=480:-1:flags=lanczos,split[s0][s1];\
 案例里出现的名画和历史图片来自维基共享资源这类可授权渠道，署名请保留。
 
 
+## ⚠️ 在线访问：HTML 必须走 GitHub Pages，不能走 jsDelivr
+
+jsDelivr 对**所有 `.html` 文件**返回 `Content-Type: text/plain`（含 fastly / gcore / testingcf
+所有边缘节点），浏览器会把它当纯文本渲染成 `<pre>` 源码 —— 页面看着"有内容"，实际完全不能用。
+
+| 用途 | 正确地址 |
+|---|---|
+| **打开网页**（HTML） | `https://newbaisays-aigc.github.io/wechat-knowledge-animation/tutorial.html` |
+| **取图片资源** | `https://cdn.jsdelivr.net/gh/newbaisays-aigc/wechat-knowledge-animation@<sha>/assets/xxx.png` |
+| **取 HTML 源码**（自己再处理） | `https://cdn.jsdelivr.net/gh/...@<sha>/tutorial.html` |
+
+所以：**图片走 jsDelivr（快、有 CDN），页面走 GitHub Pages（能正确渲染）**。
+GitHub Pages 已启用，从 `master` 根目录发布，push 后自动重建（通常 1～2 分钟）。
+
 ## 教程页（tutorial.html）
 
 从公众号正文里抽出的**纯操作版**速查手册，跟原文互补而不是复述：
@@ -275,6 +288,12 @@ ffmpeg -i in.gif -vf "fps=8,scale=480:-1:flags=lanczos,split[s0][s1];\
 | 进度条 | 三个步骤可「标记完成」，用 localStorage 记住进度 |
 | 顶部导航 | 六个锚点，`scroll-margin-top` 精确定位不被顶栏遮挡 |
 | 响应式 | ≤720px 表格转卡片式布局（场景标签做成胶囊），无横向溢出 |
+
+**线上地址**（推荐，图片走 jsDelivr CDN）：
+
+```
+https://newbaisays-aigc.github.io/wechat-knowledge-animation/tutorial.html
+```
 
 本地打开：
 
