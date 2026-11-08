@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>小红书讲解卡片 3:4</title>
+<style>
+  :root{
+    --ink:#0D1916;
+    --white:#FFFFFF;
+    --green:#5FC79A;
+    --green-dim:#3E8F6C;
+    --paper:#F4F7F5;
+    --muted:#A9BDB4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{background:#1b2622;}
+  body{
+    font-family:"Microsoft YaHei","微软雅黑","PingFang SC",sans-serif;
+    color:var(--white);
+    display:flex;flex-direction:column;align-items:center;gap:28px;
+    padding:28px 0;
+  }
+  .card{
+    width:1080px;height:1440px;
+    background:var(--ink);
+    position:relative;
+    overflow:hidden;
+    padding:70px 68px 64px;
+    display:flex;flex-direction:column;
+  }
+  /* 手绘外框 */
+  .card::before{
+    content:"";position:absolute;inset:26px;
+    border:3px solid rgba(255,255,255,.82);
+    border-radius:38px;pointer-events:none;
+  }
+  .card::after{
+    content:"";position:absolute;inset:34px;
+    border:1px solid rgba(255,255,255,.22);
+    border-radius:30px;pointer-events:none;
+  }
+
+  .tag{
+    display:inline-block;align-self:flex-start;
+    background:var(--white);color:var(--ink);
+    font-size:30px;font-weight:700;letter-spacing:.5px;
+    padding:14px 30px;border-radius:999px;
+  }
+  .tag.ghost{background:transparent;color:var(--white);border:2px solid rgba(255,255,255,.55);}
+  .kicker{
+    font-size:30px;letter-spacing:4px;color:var(--green);
+    font-weight:700;margin-bottom:18px;
+  }
+  h1{font-size:96px;line-height:1.14;font-weight:800;letter-spacing:-1px;}
+  h1 .hl{
+    background:var(--white);color:var(--ink);
+    padding:6px 22px;border-radius:16px;display:inline-block;
+  }
+  h2{font-size:70px;line-height:1.2;font-weight:800;letter-spacing:-.5px;}
+  h2 .num{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:70px;height:70px;border-radius:50%;
+    background:var(--white);color:var(--ink);
+    font-size:36px;margin-right:20px;vertical-align:8px;
+  }
+  .lead{font-size:34px;line-height:1.6;color:var(--muted);margin-top:22px;}
+  .lead b{color:var(--white);}
+
+  .spacer{flex:1;}
+
+  /* 白块 */
+  .box{background:var(--white);color:var(--ink);border-radius:26px;padding:30px 34px;}
+  .box + .box{margin-top:20px;}
+  .box .bt{font-size:34px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:14px;}
+  .box .bd{font-size:27px;line-height:1.62;color:#2B3A35;}
+  .box .bd b{color:var(--green-dim);}
+  .num-badge{
+    width:46px;height:46px;border-radius:50%;background:var(--ink);color:var(--white);
+    font-size:24px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  }
+
+  /* 代码块 */
+  .code{
+    background:#071310;border:2px solid rgba(95,199,154,.55);
+    border-radius:18px;padding:22px 26px;
+    font-family:Consolas,"Courier New",monospace;
+    font-size:26px;line-height:1.55;color:#B9E9D2;
+    word-break:break-all;
+  }
+  .code .hl{color:var(--green);font-weight:700;}
+
+  /* 流程条 */
+  .flow{display:flex;align-items:stretch;gap:10px;margin-top:26px;}
+  .flow .step{
+    flex:1;background:rgba(255,255,255,.07);
+    border:2px solid rgba(255,255,255,.28);border-radius:18px;
+    padding:20px 8px;text-align:center;
+  }
+  .flow .step .n{font-size:22px;color:var(--green);font-weight:800;margin-bottom:8px;}
+  .flow .step .t{font-size:28px;font-weight:700;}
+  .flow .step.key{background:var(--white);border-color:var(--white);}
+  .flow .step.key .n{color:var(--green-dim);}
+  .flow .step.key .t{color:var(--ink);}
+
+  /* 数据条 */
+  .stats{display:flex;gap:18px;margin-top:28px;}
+  .stats .s{
+    flex:1;background:var(--white);color:var(--ink);border-radius:22px;
+    padding:26px 18px;text-align:center;
+  }
+  .stats .s b{display:block;font-size:52px;font-weight:800;line-height:1.1;color:var(--ink);}
+  .stats .s span{display:block;font-size:23px;color:#4A5B55;margin-top:10px;line-height:1.4;}
+
+  /* 列表 */
+  .list{display:flex;flex-direction:column;gap:18px;}
+  .item{
+    background:rgba(255,255,255,.07);
+    border-left:8px solid var(--green);
+    border-radius:16px;padding:22px 26px;
+  }
+  .item .it{font-size:31px;font-weight:800;margin-bottom:8px;}
+  .item .id{font-size:25px;line-height:1.55;color:var(--muted);}
+  .item.solid{background:var(--white);border-left-color:var(--ink);}
+  .item.solid .it{color:var(--ink);}
+  .item.solid .id{color:#3A4A44;}
+
+  /* 风格网格 */
+  .grid6{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:24px;}
+  .sc{background:var(--white);color:var(--ink);border-radius:22px;overflow:hidden;padding-bottom:16px;}
+  .sc img{width:100%;height:auto;display:block;background:#0A100E;}
+  .sc .sl{display:flex;align-items:center;gap:10px;margin:14px 18px 6px;}
+  .sc .sl i{
+    width:34px;height:34px;border-radius:50%;background:var(--ink);color:var(--white);
+    font-style:normal;font-size:20px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;
+  }
+  .sc .sl b{font-size:28px;font-weight:800;}
+  .sc p{margin:0 18px;font-size:21px;line-height:1.4;color:#54655E;}
+  .sc p.case{font-size:19px;color:#8A9A94;margin-top:8px;min-height:54px;}
+
+  /* 口诀 */
+  .mnemo{
+    background:var(--white);color:var(--ink);border-radius:24px;padding:26px 30px;font-size:29px;line-height:1.7;
+  }
+  .mnemo b{color:var(--green-dim);}
+
+  .foot{
+    margin-top:auto;padding-top:24px;padding-right:180px;
+    font-size:24px;color:var(--muted);line-height:1.5;
+    border-top:1px solid rgba(255,255,255,.18);
+  }
+  .foot b{color:var(--green);}
+  .pagenum{
+    position:absolute;right:52px;bottom:44px;
+    font-size:24px;color:rgba(255,255,255,.5);letter-spacing:2px;
+  }
+  .hl-line{
+    display:block;width:150px;height:10px;background:var(--green);
+    border-radius:6px;margin-top:26px;
+  }
+  .deco{
+    position:absolute;top:96px;right:40px;width:440px;
+    opacity:.92;pointer-events:none;
+  }
+  .who{
+    margin-top:30px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  }
+  .who .lb{font-size:26px;color:var(--muted);letter-spacing:2px;}
+  .who span.ch{
+    font-size:26px;color:var(--ink);background:var(--white);
+    padding:12px 24px;border-radius:999px;font-weight:700;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 01 封面 ============ -->
+<section class="card" id="c01">
+  <img src="art-person.png" alt="" class="deco">
+  <span class="tag">小白姐姐工作室 · AI 实操教程</span>
+  <div class="spacer"></div>
+  <div class="kicker">0 基础友好</div>
+  <h1>把知识<br>变为视频</h1>
+  <span class="hl-line"></span>
+  <div class="lead" style="margin-top:34px">
+    3 步装好 Skill，<b>6 套风格</b>直接抄——<br>
+    把讲义、PPT、口播稿，变成一支能直接发的短片。
+  </div>
+  <div class="who">
+    <span class="lb">谁在用</span>
+    <span class="ch">自媒体博主</span>
+    <span class="ch">老师</span>
+    <span class="ch">销售</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="stats">
+    <div class="s"><b>15 分钟</b><span>装完并跑通</span></div>
+    <div class="s"><b>6 套</b><span>风格模板开箱即用</span></div>
+    <div class="s"><b>≈1 元</b><span>一条 10–15 秒成片</span></div>
+  </div>
+  <div class="foot">全流程可复制 · 提示词直接抄 · <b>MIT 协议可商用</b></div>
+  <div class="pagenum">01 / 08</div>
+</section>
+
+<!-- ============ 02 它是什么 ============ -->
+<section class="card" id="c02">
+  <span class="tag ghost">01 先看这个</span>
+  <div class="spacer"></div>
+  <h2>它不是独立软件<br>是<b>一套 Skill</b></h2>
+  <p class="lead">得挂在一个<b>能跑命令、能读写文件</b>的工具上。<br>本文用 WorkBuddy 演示，Claude Code / Cursor 同理。</p>
+  <div class="spacer"></div>
+  <div class="list">
+    <div class="item solid">
+      <div class="it">① 一个能跑它的工具</div>
+      <div class="id">WorkBuddy（本文演示）</div>
+    </div>
+    <div class="item solid">
+      <div class="it">② 一份可用的模型额度</div>
+      <div class="id">推荐 DeepSeek-V4.1-Flash，写脚本 / 读参考图 / 调工具都够</div>
+    </div>
+    <div class="item solid">
+      <div class="it">③ 一套运行环境</div>
+      <div class="id">Node.js、Python、FFmpeg——安装时会自动帮你查缺什么</div>
+    </div>
+  </div>
+  <div class="flow">
+    <div class="step"><div class="n">1</div><div class="t">输入</div></div>
+    <div class="step"><div class="n">2</div><div class="t">追问</div></div>
+    <div class="step key"><div class="n">3</div><div class="t">分镜</div></div>
+    <div class="step"><div class="n">4</div><div class="t">生成</div></div>
+    <div class="step"><div class="n">5</div><div class="t">交付</div></div>
+  </div>
+  <div class="foot">第 3 步的分镜表是<b>改稿的唯一机会</b>，别跳过。</div>
+  <div class="pagenum">02 / 08</div>
+</section>
+
+<!-- ============ 03 适合谁 ============ -->
+<section class="card" id="c03">
+  <span class="tag ghost">02 它适合谁</span>
+  <div class="spacer"></div>
+  <h2>三种人<br>能省下<b>大把时间</b></h2>
+  <div class="spacer"></div>
+  <div class="list">
+    <div class="item">
+      <div class="it">天天剪视频的自媒体博主</div>
+      <div class="id">后期动效、配乐、字幕这些重复活儿，一次性交出去</div>
+    </div>
+    <div class="item">
+      <div class="it">想把 PPT 变成直观视频的老师</div>
+      <div class="id">把讲义丢进去，直接出成片</div>
+    </div>
+    <div class="item">
+      <div class="it">天天要给客户出方案的销售</div>
+      <div class="id">一个说法，能变成一支可发的短片</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="box" style="background:var(--green);color:var(--ink)">
+    <div class="bt">以前 vs 现在</div>
+    <div class="bd" style="color:var(--ink);font-size:29px">
+      以前：一条视频的后期动效要花<b style="color:#0D1916">几天</b>；<br>
+      现在：同一量级大概<b style="color:#0D1916">十几分钟</b>。<br>
+      省下来的是重复劳动，不是你的创意时间。
+    </div>
+  </div>
+  <div class="foot">还有一件事比"快"更重要：<b>它会先给你分镜表</b>，你能看到成片长什么样再决定。</div>
+  <div class="pagenum">03 / 08</div>
+</section>
+
+<!-- ============ 04 三步 ①② ============ -->
+<section class="card" id="c04">
+  <span class="tag ghost">03 三步装好 · 全程约 15 分钟</span>
+  <div class="spacer"></div>
+  <h2><span class="num">1</span>装 WorkBuddy</h2>
+  <div class="code" style="margin-top:20px">https://www.workbuddy.cn/</div>
+  <div class="list" style="margin-top:20px">
+    <div class="item solid"><div class="it">Windows</div><div class="id">双击安装包，按向导确认协议、安装路径和快捷方式</div></div>
+    <div class="item solid"><div class="it">macOS</div><div class="id">把 WorkBuddy 拖进「应用程序」再打开，别在磁盘映像里直接跑</div></div>
+    <div class="item solid"><div class="it">登录后</div><div class="id">左边工作区、中间对话框、右下角按项目切模型</div></div>
+  </div>
+  <div class="spacer"></div>
+  <h2><span class="num">2</span>装知识动画 Skill</h2>
+  <div class="code" style="margin-top:20px">https://github.com/newbaisays-aigc/knowledge-animation-video</div>
+  <div class="code" style="margin-top:14px">帮我安装这个skill，安装完之后完成自查，并给我反馈完成情况</div>
+  <div class="foot">⚠️ <b>分两次复制、分别粘。</b>第一行是地址，第二行是指令，粘成一行它认不出来。装好后去「技能 → 已安装」查看。</div>
+  <div class="pagenum">04 / 08</div>
+</section>
+
+<!-- ============ 05 三步 ③ ============ -->
+<section class="card" id="c05">
+  <span class="tag ghost">03 三步装好 · 最后一步</span>
+  <div class="spacer"></div>
+  <h2><span class="num">3</span>跑通第一条</h2>
+  <p class="lead">最简提示词，贴进对话框：</p>
+  <div class="code">为我用knowledege视频skill，做一个解释欧拉公式的原理的动画，使用默认风格</div>
+  <p class="lead" style="margin-top:22px">它会先问你几个选择，再给你一张<b>分镜设计表</b>。看完回这一句就能开跑：</p>
+  <div class="code"><span class="hl">可以，请帮我开始制作</span></div>
+  <div class="spacer"></div>
+  <div class="box">
+    <div class="bt">交付三件套</div>
+    <div class="bd">成片 MP4 ＋ 分镜表 ＋ 消耗明细</div>
+  </div>
+  <div class="box" style="background:var(--green)">
+    <div class="bt" style="color:var(--ink)">成本实测</div>
+    <div class="bd" style="color:var(--ink)">
+      这一条跑完一共 <b style="color:#0D1916">18.65 积分</b>，不到一块钱。<br>
+      先拿一条十几秒的短片试试水，成本比想象的低。
+    </div>
+  </div>
+  <div class="foot">提示词里的 <b>knowledege</b> 是 Skill 注册名，<b>照抄别改</b>，要改的是后面的主题。</div>
+  <div class="pagenum">05 / 08</div>
+</section>
+
+<!-- ============ 06 六套风格 ============ -->
+<section class="card" id="c06">
+  <span class="tag ghost">04 六套风格</span>
+  <h2 style="margin-top:26px">怎么选？<b>照这句记</b></h2>
+  <div class="mnemo" style="margin-top:22px">
+    <b>要震撼</b>选 3D，<b>要亲和</b>选手绘，<b>要推导</b>选公式，<b>要讲结构</b>选信息图，<b>讲历史</b>选档案，<b>看作品</b>选美术馆。
+  </div>
+  <div class="grid6">
+    <div class="sc"><img src="../cases/a-3d.jpg" alt="3D 数据风格案例"><div class="sl"><i>A</i><b>3D 数据</b></div><p>数据新闻、财报、产品发布</p><p class="case">SpaceX Q3 财报：数字滚动，柱体升起</p></div>
+    <div class="sc"><img src="../cases/b-hand.jpg" alt="手绘涂鸦风格案例"><div class="sl"><i>B</i><b>手绘涂鸦</b></div><p>观点故事、读书笔记、人文</p><p class="case">入境数据：四个手绘小人逐个出现</p></div>
+    <div class="sc"><img src="../cases/c-formula.jpg" alt="数学公式风格案例"><div class="sl"><i>C</i><b>数学公式</b></div><p>数学、物理、算法推导</p><p class="case">欧拉公式：单位圆上「乘 i 左转 90°」</p></div>
+    <div class="sc"><img src="../cases/d-infographic.jpg" alt="信息图风格案例"><div class="sl"><i>D</i><b>信息图</b></div><p>流程、方法、系统架构</p><p class="case">SpaceX 五步法：蓝图卡片依次贴出</p></div>
+    <div class="sc"><img src="../cases/e-archive.jpg" alt="复古档案风格案例"><div class="sl"><i>E</i><b>复古档案</b></div><p>历史人物、事件、老物件</p><p class="case">拿破仑：铭牌滚动数 60+ 场战役</p></div>
+    <div class="sc"><img src="../cases/f-gallery.jpg" alt="美术馆风格案例"><div class="sl"><i>F</i><b>美术馆</b></div><p>名画、文物、设计、建筑</p><p class="case">蒙娜丽莎：镜片压上去放大眼部</p></div>
+  </div>
+  <div class="foot">每套都配了现成提示词，改几个词就是你自己的。</div>
+  <div class="pagenum">06 / 08</div>
+</section>
+
+<!-- ============ 07 提示词速查 ============ -->
+<section class="card" id="c07">
+  <span class="tag ghost">05 提示词速查</span>
+  <div class="spacer"></div>
+  <h2>这 5 句<br><b>直接复制就能用</b></h2>
+  <div class="spacer"></div>
+  <div class="list">
+    <div class="item solid">
+      <div class="it">最快出片 · 只换主题词</div>
+      <div class="code" style="margin-top:12px;font-size:24px">为我用knowledege视频skill，做一个解释【主题】的原理的动画，使用默认风格</div>
+    </div>
+    <div class="item solid">
+      <div class="it">指定风格</div>
+      <div class="code" style="margin-top:12px;font-size:24px">用knowledege视频skill，请帮我设计一个【主题】，选择【风格名】风格。</div>
+    </div>
+    <div class="item solid">
+      <div class="it">带口播稿 / 音频 / 参考图</div>
+      <div class="code" style="margin-top:12px;font-size:24px">用knowledege 视频skill，帮我做一个知识动画，我的口播稿/音频是__，想要的风格参考这张图片，不要用默认风格</div>
+    </div>
+    <div class="item solid">
+      <div class="it">确认分镜 → 开工</div>
+      <div class="code" style="margin-top:12px;font-size:24px">可以，请帮我开始制作</div>
+    </div>
+  </div>
+  <div class="foot">改的时候只改<b>【】里的主题</b>，其余照抄。<br>
+    做完自己的风格后存起来：帮我把这个模板存为一个skill，下次可以复用</div>
+  <div class="pagenum">07 / 08</div>
+</section>
+
+<!-- ============ 08 避坑 + 结尾 ============ -->
+<section class="card" id="c08">
+  <span class="tag ghost">06 避坑清单</span>
+  <div class="spacer"></div>
+  <h2>四个最容易翻车的地方<br><b>都是实测踩出来的</b></h2>
+  <div class="spacer"></div>
+  <div class="list">
+    <div class="item">
+      <div class="it">AI 偶尔会发挥，数字不一定对</div>
+      <div class="id">年代、术语、数字不保证正确，要对外发布的关键处自己再核一遍</div>
+    </div>
+    <div class="item">
+      <div class="it">第一次没跑通，多半是环境没配齐</div>
+      <div class="id">别怀疑自己，回头看报错：Node.js / Python / FFmpeg 缺哪个它会提示</div>
+    </div>
+    <div class="item">
+      <div class="it">用在线配音，文稿会送到语音服务那边</div>
+      <div class="id">没公开的内容先别贴；图片、字体、音乐商用前自己确认授权</div>
+    </div>
+    <div class="item">
+      <div class="it">分镜表是改稿的唯一机会</div>
+      <div class="id">生成之后改一个数字都要重跑，确认那一步多花两分钟比返工划算</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="box">
+    <div class="bt">技能仓库（MIT 协议，可商用）</div>
+    <div class="bd">github.com/newbaisays-aigc/knowledge-animation-video<br>WorkBuddy：workbuddy.cn</div>
+  </div>
+  <div class="foot">评论区扣「<b>知识动画</b>」，我把完整提示词包发你。</div>
+  <div class="pagenum">08 / 08</div>
+</section>
+
+</body>
+</html>
