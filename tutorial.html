@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="知识动画 Skill 实操教程：3 步装好、6 套风格速查、全部提示词可一键复制、常见坑位清单。">
+<title>知识动画实操教程 · 3 步装好，6 套风格直接抄</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --g900:#0f2e25; --g800:#183c30; --g700:#17483a; --g600:#2f7058;
+    --g500:#4da783; --g400:#7cc4a4; --g300:#9fd8bd; --g100:#eaf6ef;
+    --g50:#f7fbf8; --ink:#1d2925; --body:#3d4d47; --muted:#6d7d76;
+    --line:#e4ede8; --warn:#fff7e8; --warn-ink:#6c511f; --warn-line:#f0dcb4;
+    --card:#ffffff;
+  }
+  html{scroll-behavior:smooth;scroll-padding-top:72px}
+  section{scroll-margin-top:76px}
+  body{
+    margin:0;background:#f3f5f2;color:var(--body);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:16px;line-height:1.85;-webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- 顶栏 ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);
+    backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--line);
+  }
+  .topbar-inner{
+    max-width:1000px;margin:0 auto;padding:0 24px;height:56px;
+    display:flex;align-items:center;gap:20px;
+  }
+  .topbar .brand{
+    flex:none;font-size:13px;font-weight:700;letter-spacing:1.4px;color:var(--g600);
+    text-decoration:none;white-space:nowrap;
+  }
+  .topbar nav{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin-left:auto}
+  .topbar nav::-webkit-scrollbar{display:none}
+  .topbar nav a{
+    flex:none;padding:6px 11px;border-radius:7px;color:var(--muted);font-size:13.5px;
+    text-decoration:none;white-space:nowrap;transition:.16s;
+  }
+  .topbar nav a:hover{background:var(--g100);color:var(--g600)}
+
+  /* ---------- 布局 ---------- */
+  .wrap{max-width:1000px;margin:0 auto;padding:0 24px 80px}
+  section{margin:0 0 8px}
+  .hero{padding:52px 0 34px;border-bottom:1px solid var(--line)}
+  .hero .eyebrow{
+    display:inline-block;margin-bottom:16px;padding:4px 12px;border-radius:20px;
+    background:var(--g100);color:var(--g600);font-size:12px;font-weight:700;letter-spacing:.5px;
+  }
+  .hero h1{
+    margin:0 0 16px;max-width:19em;color:var(--ink);
+    font-size:38px;line-height:1.34;letter-spacing:-.6px;font-weight:800;
+  }
+  .hero h1 em{font-style:normal;color:var(--g600);position:relative}
+  .hero h1 em::after{
+    content:"";position:absolute;left:0;right:0;bottom:2px;height:9px;
+    background:var(--g300);opacity:.45;z-index:-1;border-radius:2px;
+  }
+  .hero .lead{max-width:40em;margin:0 0 26px;color:var(--body);font-size:17px;line-height:1.85}
+  .stats{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 22px}
+  .stat{
+    padding:11px 16px;border:1px solid var(--line);border-radius:10px;background:var(--card);
+  }
+  .stat b{display:block;color:var(--g700);font-size:19px;line-height:1.4;letter-spacing:-.3px}
+  .stat span{color:var(--muted);font-size:12.5px}
+  .hero .meta{color:#8b9792;font-size:13px}
+
+  h2{
+    margin:56px 0 8px;padding-left:13px;border-left:4px solid var(--g500);
+    color:var(--ink);font-size:25px;line-height:1.4;letter-spacing:-.3px;
+  }
+  h2 .num{
+    display:inline-block;margin-right:9px;padding:1px 9px;border-radius:6px;
+    background:var(--g600);color:#fff;font-size:13px;font-weight:700;vertical-align:3px;
+    letter-spacing:.5px;
+  }
+  h3{margin:32px 0 10px;color:var(--ink);font-size:18px;line-height:1.5}
+  .sec-intro{margin:0 0 22px;color:var(--muted);font-size:15px}
+
+  p{margin:0 0 18px}
+  a{color:var(--g600)}
+
+  /* ---------- 组件 ---------- */
+  .card{
+    padding:20px 22px;border:1px solid var(--line);border-radius:12px;background:var(--card);
+    margin:0 0 16px;
+  }
+  .note{
+    margin:20px 0;padding:16px 18px;border-radius:10px;background:var(--g100);
+    color:#284b3e;font-size:14.5px;line-height:1.85;
+  }
+  .note b{color:var(--g700)}
+  .note p{margin:8px 0 0;font-size:14.5px}
+  .note p:last-child{margin-bottom:0}
+  .warn{
+    margin:20px 0;padding:16px 18px;border:1px solid var(--warn-line);border-radius:10px;
+    background:var(--warn);color:var(--warn-ink);font-size:14.5px;line-height:1.85;
+  }
+  .warn b{color:#7a5c22}
+
+  /* 提示框 */
+  .tip{
+    margin:16px 0;padding:15px 18px;border-radius:10px;background:var(--g50);
+    border:1px solid #dfeae3;font-size:14.5px;color:#3d4d47;
+  }
+  .tip b{color:var(--g700)}
+
+  /* 复制块 */
+  .copybox{
+    margin:18px 0;border:1px solid #9ccdb6;border-radius:11px;background:#fff;overflow:hidden;
+  }
+  .copybox-head{
+    display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;
+    background:var(--g800);color:#eafaf2;font-size:13px;font-weight:600;
+  }
+  .copybox-head .step-badge{
+    flex:none;padding:1px 8px;border-radius:5px;background:rgba(255,255,255,.16);
+    font-size:11px;letter-spacing:.4px;
+  }
+  .copybox-head .grow{flex:1;min-width:0}
+  .copybox pre{
+    margin:0;padding:15px 17px;white-space:pre-wrap;word-break:break-word;
+    color:var(--g700);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Microsoft YaHei",monospace;
+    font-size:14px;line-height:1.8;background:#fff;
+  }
+  .copybox.long pre{font-size:13px;line-height:1.85;max-height:420px;overflow:auto}
+
+  .btn{
+    appearance:none;border:0;cursor:pointer;font-family:inherit;
+    padding:8px 15px;border-radius:7px;background:var(--g600);color:#fff;
+    font-size:13px;font-weight:600;line-height:1.5;white-space:nowrap;transition:.16s;
+  }
+  .btn:hover{background:#235945}
+  .btn:focus-visible{outline:3px solid var(--g300);outline-offset:2px}
+  .btn.ghost{background:rgba(255,255,255,.15);color:#eafaf2}
+  .btn.ghost:hover{background:rgba(255,255,255,.26)}
+  .btn.done{background:var(--g700)}
+  .btn.sm{padding:5px 11px;font-size:12px}
+
+  /* 步骤 */
+  .steps{counter-reset:s}
+  .step{
+    position:relative;margin:0 0 18px;padding:22px 24px 22px 76px;
+    border:1px solid var(--line);border-radius:13px;background:var(--card);
+  }
+  .step::before{
+    counter-increment:s;content:counter(s);
+    position:absolute;left:22px;top:22px;width:36px;height:36px;border-radius:50%;
+    background:var(--g600);color:#fff;font-size:16px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;line-height:1;
+  }
+  .step h3{margin:0 0 8px;font-size:19px}
+  .step .sub{margin:0 0 14px;color:var(--muted);font-size:14px}
+  .step > :last-child{margin-bottom:0}
+
+  .kv{display:flex;gap:10px;margin:12px 0;font-size:14.5px;line-height:1.8}
+  .kv .k{
+    flex:none;padding:2px 9px;border-radius:5px;background:var(--g100);color:var(--g600);
+    font-size:12.5px;font-weight:700;height:fit-content;margin-top:4px;
+  }
+  .kv .v{flex:1;min-width:0}
+
+  code{
+    padding:1px 6px;border-radius:4px;background:#eef3f0;color:var(--g700);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+  }
+
+  /* 风格卡 */
+  .styles{display:grid;grid-template-columns:repeat(auto-fit,minmax(272px,1fr));gap:16px;margin:24px 0}
+  .style{
+    display:flex;flex-direction:column;border:1px solid var(--line);border-radius:13px;
+    background:var(--card);overflow:hidden;
+  }
+  .style-head{display:flex;align-items:baseline;gap:10px;padding:16px 18px 12px}
+  .style-head .letter{
+    flex:none;width:32px;height:32px;border-radius:8px;background:var(--g600);color:#fff;
+    font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  }
+  .style-head h3{margin:0;font-size:17px;line-height:1.3}
+  .style-fit{padding:0 18px;color:var(--muted);font-size:13.5px;line-height:1.7}
+  .style-case{
+    margin:12px 18px 0;padding:11px 13px;border-radius:8px;background:var(--g50);
+    border:1px solid #e4ede8;color:#3d4d47;font-size:13.5px;line-height:1.75;
+  }
+  .style-case b{color:var(--g700)}
+  .style-shot{margin:12px 18px 0;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#0f2e25}
+  .style-shot img{display:block;width:100%;height:auto;display:block}
+  .style-foot{margin-top:auto;padding:14px 18px 16px}
+  .style-foot details{margin:0 0 10px}
+  .style-foot summary{
+    cursor:pointer;color:var(--g600);font-size:13px;font-weight:600;list-style:none;
+    display:flex;align-items:center;gap:6px;padding:3px 0;
+  }
+  .style-foot summary::-webkit-details-marker{display:none}
+  .style-foot summary::before{content:"▸";font-size:11px;transition:.16s}
+  .style-foot details[open] summary::before{transform:rotate(90deg)}
+  .style-foot summary:hover{color:var(--g800)}
+  .style-prompt{
+    margin:10px 0 0;padding:12px 13px;border-radius:8px;background:var(--g800);color:#eafff4;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Microsoft YaHei",monospace;
+    font-size:12.5px;line-height:1.8;
+  }
+  .style-foot .btn{width:100%}
+
+  .mnemonic{
+    margin:26px 0;padding:20px 22px;border-radius:12px;background:var(--g800);color:#eafaf2;
+  }
+  .mnemonic .lbl{
+    display:block;margin-bottom:9px;color:var(--g300);font-size:12px;font-weight:700;letter-spacing:1.2px;
+  }
+  .mnemonic p{margin:0;font-size:16px;line-height:1.95;color:#eafff4}
+  .mnemonic b{color:#9fd8bd;font-weight:700}
+
+  /* 清单 */
+  .checklist{margin:20px 0;padding:0;list-style:none}
+  .checklist li{
+    position:relative;margin:0 0 10px;padding:13px 16px 13px 46px;
+    border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:14.5px;line-height:1.8;
+  }
+  .checklist li::before{
+    content:"";position:absolute;left:16px;top:16px;width:16px;height:16px;
+    border:2px solid var(--g400);border-radius:4px;background:#fff;
+  }
+  .checklist li b{display:block;margin-bottom:2px;color:var(--g700)}
+  .checklist li span{color:var(--muted);font-size:13.5px}
+
+  .progress{
+    display:flex;align-items:center;gap:12px;margin:24px 0 0;padding:14px 18px;
+    border:1px solid var(--line);border-radius:11px;background:var(--card);
+  }
+  .progress .bar{flex:1;height:7px;border-radius:4px;background:#e9efec;overflow:hidden}
+  .progress .bar i{display:block;height:100%;width:0;background:var(--g500);transition:width .3s}
+  .progress .txt{color:var(--muted);font-size:13px;white-space:nowrap}
+
+  /* 表格 */
+  .table-scroll{margin:20px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;border:1px solid var(--line)}
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  th,td{padding:11px 13px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);text-align:left;vertical-align:top;line-height:1.7}
+  th:last-child,td:last-child{border-right:0}
+  tr:last-child td{border-bottom:0}
+  th{background:var(--g50);color:var(--g700);font-weight:700;font-size:13.5px;white-space:nowrap}
+  td code{white-space:normal;word-break:break-word;display:inline-block;min-width:16em}
+
+  /* 图片 */
+  figure{margin:22px 0}
+  figure img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:10px}
+  figcaption{margin-top:8px;color:#919b97;font-size:12.5px;text-align:center;line-height:1.7}
+
+  .footer{
+    margin-top:60px;padding:26px 0 0;border-top:1px solid var(--line);
+    color:#929c98;font-size:12.5px;line-height:1.9;
+  }
+  .footer b{color:var(--muted)}
+  .footer a{color:var(--muted)}
+
+  .toc{
+    margin:26px 0 0;padding:18px 20px;border:1px solid var(--line);border-radius:12px;background:var(--card);
+  }
+  .toc b{display:block;margin-bottom:10px;color:var(--g700);font-size:13px;letter-spacing:.6px}
+  .toc ol{margin:0;padding-left:20px;columns:2;column-gap:28px}
+  .toc li{margin:3px 0;font-size:14px;line-height:1.7;break-inside:avoid}
+  .toc a{color:var(--body);text-decoration:none}
+  .toc a:hover{color:var(--g600);text-decoration:underline}
+
+  @media (max-width:720px){
+    .hero{padding:34px 0 26px}
+    .hero h1{font-size:28px}
+    .hero .lead{font-size:16px}
+    h2{font-size:21px;margin-top:42px}
+    .step{padding:20px 18px 20px 20px}
+    .step::before{left:20px;top:20px;width:30px;height:30px;font-size:14px}
+    .step{padding-top:62px}
+    .toc ol{columns:1}
+    .topbar-inner{padding:0 16px}
+    .wrap{padding:0 16px 60px}
+
+    /* 表格在窄屏改为卡片式：避免「场景」列被压成竖排单字 */
+    .table-scroll{border:0;overflow:visible}
+    table,tbody,tr,td{display:block;width:100%}
+    thead{display:none}
+    tr{margin:0 0 12px;padding:13px 15px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+    tr:last-child{margin-bottom:0}
+    td{border:0;padding:0}
+    td+td{margin-top:10px}
+    td[data-label]{display:block}
+    td[data-label]::before{
+      content:attr(data-label);display:block;margin-bottom:5px;
+      color:var(--g600);font-size:11.5px;font-weight:700;letter-spacing:.6px;
+    }
+    /* 提高特异性（0,2,1）压过上面的 td{display:block}（0,0,1） */
+    .table-scroll td[data-label="场景"]{
+      display:inline-block;width:auto;margin-bottom:10px;
+      padding:2px 12px;border-radius:20px;
+      background:var(--g100);color:var(--g600);font-size:13px;font-weight:700;
+    }
+    td[data-label="场景"]::before{display:none}
+    td code{min-width:0;font-size:13px}
+  }
+  @media print{
+    .topbar,.btn{display:none}
+    body{background:#fff}
+    .step,.style,.card{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#top">小白姐姐工作室</a>
+    <nav>
+      <a href="#start">速览</a>
+      <a href="#steps">三步装好</a>
+      <a href="#styles">6 套风格</a>
+      <a href="#prompts">提示词</a>
+      <a href="#custom">自定义风格</a>
+      <a href="#pitfalls">避坑</a>
+    </nav>
+  </div>
+</div>
+
+<div class="wrap" id="top">
+
+  <header class="hero">
+    <span class="eyebrow">知识动画 Skill · 实操教程</span>
+    <h1>3 步装好 Skill，<em>6 套风格</em>直接抄——<br>把一段话变成成片</h1>
+    <p class="lead">
+      这份是纯操作版：装什么、贴哪句话、选哪个风格、跑完多少钱、哪里会翻车，
+      全在这页。文字、提示词、模板结构都能直接拿去用。
+    </p>
+    <div class="stats">
+      <div class="stat"><b>3 步</b><span>安装到出片</span></div>
+      <div class="stat"><b>6 套</b><span>风格模板开箱即用</span></div>
+      <div class="stat"><b>18.65 积分</b><span>一条 10–15 秒成片实测</span></div>
+      <div class="stat"><b>≈ 1 元</b><span>总成本，不含订阅</span></div>
+    </div>
+    <p class="meta">小白姐姐 · AI 实操教程 · 2026 年 11 月 · knowledge-animation-video v0.1.0 Beta (MIT)</p>
+  </header>
+
+  <!-- ============ 速览 ============ -->
+  <section id="start">
+    <h2><span class="num">01</span>先看这个</h2>
+    <p class="sec-intro">如果只想知道「这是个什么东西、为什么值得装」，看这一节就够了。</p>
+
+    <div class="note">
+      <p><b>它不是独立软件。</b>它是一套 Skill（技能包），需要挂在一个能运行命令、能读写文件的工具上。
+      本文用 <b>WorkBuddy</b> 演示——Claude Code、Codex、Cursor 这类同样可以，流程换成对应的按钮位置就行。</p>
+      <p><b>你实际需要准备三样：</b>一个能跑它的工具、一份可用的模型额度、Node.js / Python / FFmpeg 这套运行环境（安装时会自动帮你查缺什么）。</p>
+    </div>
+
+    <h3>它适合谁</h3>
+    <ul class="checklist">
+      <li><b>经常剪视频的自媒体博主</b><span>后期动效、配乐、字幕这些重复活儿一次性交出去</span></li>
+      <li><b>想把 PPT 变成直观视频的老师</b><span>把讲义丢进去，直接出成片</span></li>
+      <li><b>天天要给客户出方案的销售</b><span>一个说法能变成一支可发的短片</span></li>
+    </ul>
+
+    <h3>它怎么工作</h3>
+    <div class="card">
+      <div class="kv"><span class="k">输入</span><span class="v">你告诉它想讲什么（或丢一份口播稿 / 音频）</span></div>
+      <div class="kv"><span class="k">追问</span><span class="v">它先问你几个关键问题（时长、比例、风格、语言）</span></div>
+      <div class="kv"><span class="k">分镜</span><span class="v">先出一张分镜设计表给你确认——<b>这一步别跳过</b>，是改稿的唯一机会</span></div>
+      <div class="kv"><span class="k">生成</span><span class="v">你回一句「可以，请帮我开始制作」，它自己调工具出片</span></div>
+      <div class="kv"><span class="k">交付</span><span class="v">成片 MP4 + 分镜表 + 消耗明细</span></div>
+    </div>
+
+    <div class="tip">
+      <b>一句话预期：</b>以前一条视频后期动效要花几天，现在同一量级大概十几分钟——
+      省下来的是重复劳动，不是你的创意时间。
+    </div>
+
+    <div class="toc">
+      <b>本页目录</b>
+      <ol>
+        <li><a href="#start">先看这个</a> —— 它是什么、适合谁、怎么工作</li>
+        <li><a href="#steps">三步装好</a> —— 装 WorkBuddy、装 Skill、跑通第一条</li>
+        <li><a href="#styles">6 套风格</a> —— 选型对照 + 每套的真实案例和提示词</li>
+        <li><a href="#prompts">提示词速查</a> —— 全部可一键复制</li>
+        <li><a href="#custom">自定义风格</a> —— 做一套你自己的模板</li>
+        <li><a href="#pitfalls">避坑清单</a> —— 4 个最容易翻车的地方</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============ 三步 ============ -->
+  <section id="steps">
+    <h2><span class="num">02</span>三步装好</h2>
+    <p class="sec-intro">全程约 15 分钟。装完顺手把第 1 条短片跑出来，别攒着。</p>
+
+    <div class="steps">
+      <!-- STEP 1 -->
+      <div class="step">
+        <h3>装 WorkBuddy</h3>
+        <p class="sub">下载 → 安装 → 登录</p>
+
+        <div class="copybox">
+          <div class="copybox-head">
+            <span class="step-badge">官网</span>
+            <span class="grow">打开官网下载电脑版</span>
+            <button class="btn" data-copy="https://www.workbuddy.cn/" data-label="已复制，去浏览器打开">复制网址</button>
+          </div>
+          <pre>https://www.workbuddy.cn/</pre>
+        </div>
+
+        <div class="kv"><span class="k">Windows</span><span class="v">双击安装包，按向导确认协议、安装路径和快捷方式，完成后启动并登录。</span></div>
+        <div class="kv"><span class="k">macOS</span><span class="v">打开 <code>.dmg</code> 后把 WorkBuddy 拖进「应用程序」，再从启动台打开——<b>不要直接在磁盘映像里运行</b>。</span></div>
+        <div class="kv"><span class="k">登录后</span><span class="v">左边是工作区（项目都放这儿），中间对话框是主要工作板块（写需求、传文件都在这里），右下角按项目切模型。</span></div>
+
+        <figure>
+          <img src="assets/08-login-annotated.png" alt="WorkBuddy 登录后的界面：左侧工作区、中间对话框、右下角模型选择">
+          <figcaption>登录后的界面：① 左侧工作区放项目　② 对话框是主要工作板块　③ 右下角按项目换模型</figcaption>
+        </figure>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="step">
+        <h3>装知识动画 Skill</h3>
+        <p class="sub">选模型 → 贴两行内容 → 等它装完</p>
+
+        <div class="kv"><span class="k">选模型</span><span class="v">推荐 <b>DeepSeek-V4.1-Flash</b>。写脚本、读参考图、调用工具都够用，响应快，做动画这块效果也稳。</span></div>
+
+        <div class="copybox">
+          <div class="copybox-head">
+            <span class="step-badge">第 1 行</span>
+            <span class="grow">技能地址</span>
+            <button class="btn" data-copy="https://github.com/newbaisays-aigc/knowledge-animation-video" data-label="已复制">复制地址</button>
+          </div>
+          <pre>https://github.com/newbaisays-aigc/knowledge-animation-video</pre>
+        </div>
+
+        <div class="copybox">
+          <div class="copybox-head">
+            <span class="step-badge">第 2 行</span>
+            <span class="grow">安装指令</span>
+            <button class="btn" data-copy="帮我安装这个skill，安装完之后完成自查，并给我反馈完成情况" data-label="已复制">复制指令</button>
+          </div>
+          <pre>帮我安装这个skill，安装完之后完成自查，并给我反馈完成情况</pre>
+        </div>
+
+        <div class="note">
+          <p><b>分两次复制、分别粘。</b>第一行是地址，第二行是指令，粘成一行它认不出来。</p>
+          <p>首次安装要点时间，别急。它会顺带检查你电脑里有没有 <b>Node.js、Python、FFmpeg</b>，以及后续生成和剪辑要用的工具，缺什么会提示你。</p>
+        </div>
+
+        <figure>
+          <img src="assets/09-install-chat.png?v=20261107-2" alt="在 WorkBuddy 对话框里粘贴技能地址和安装指令后的自动安装过程">
+          <figcaption>贴完地址和指令，它会自己检查依赖并装好</figcaption>
+        </figure>
+
+        <div class="kv"><span class="k">装好后</span><span class="v">去「专家 · 技能 · 连接器」→「技能」→「已安装」查看，每张卡片右边的开关可以随时启停。</span></div>
+        <div class="kv"><span class="k">装不上</span><span class="v">下载 ZIP 后走「添加技能」→「上传技能」。</span></div>
+
+        <figure>
+          <img src="assets/11-installed-list.png" alt="已安装技能列表页，每张卡片右侧有启停开关">
+          <figcaption>「已安装技能」页：装好的技能都在这里</figcaption>
+        </figure>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="step">
+        <h3>跑通第一条</h3>
+        <p class="sub">最简提示词 → 确认分镜 → 出片</p>
+
+        <div class="copybox">
+          <div class="copybox-head">
+            <span class="step-badge">方法一</span>
+            <span class="grow">最简单的一句话</span>
+            <button class="btn" data-copy="为我用knowledege视频skill，做一个解释欧拉公式的原理的动画，使用默认风格" data-label="已复制，去对话框粘贴">复制提示词</button>
+          </div>
+          <pre>为我用knowledege视频skill，做一个解释欧拉公式的原理的动画，使用默认风格</pre>
+        </div>
+
+        <p>它会先问你几个选择，然后给你一张<b>分镜设计表</b>。看完回一句就能开跑：</p>
+
+        <div class="copybox">
+          <div class="copybox-head">
+            <span class="step-badge">确认</span>
+            <span class="grow">回复这句进入生成</span>
+            <button class="btn" data-copy="可以，请帮我开始制作" data-label="已复制">复制</button>
+          </div>
+          <pre>可以，请帮我开始制作</pre>
+        </div>
+
+        <figure>
+          <img src="assets/14-method1-real-feedback.jpg" alt="WorkBuddy 返回的分镜设计表与右侧成片预览">
+          <figcaption>左边是它写的分镜表和注意事项，右边就是成片</figcaption>
+        </figure>
+
+        <div class="note">
+          <p><b>成片在哪：</b>顶部的文件标签就是导出的成片（如「欧拉公式原理_16x9.mp4」），点开就能看。</p>
+          <p><b>成本实测：</b>这一条跑完<b>一共花了 18.65 个积分，不到一块钱</b>。先拿一条短片试试水——十几秒的片子，成本真的比想象的低。</p>
+        </div>
+
+        <figure>
+          <img src="assets/17-credit-zoom.jpg" alt="本次任务消耗明细：共消耗 18.65 积分，使用 DeepSeek-V4.1-Flash">
+          <figcaption>本次任务实际消耗：共 18.65 积分，模型 DeepSeek-V4.1-Flash</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="progress" id="progress">
+      <span class="txt" id="progress-txt">完成上面 3 步，就能出第一条片</span>
+      <div class="bar"><i id="progress-bar"></i></div>
+    </div>
+  </section>
+
+  <!-- ============ 6 套风格 ============ -->
+  <section id="styles">
+    <h2><span class="num">03</span>6 套风格怎么选</h2>
+    <p class="sec-intro">每套都附了真实案例 GIF 和现成提示词，改几个词就是你自己的。</p>
+
+    <div class="mnemonic">
+      <span class="lbl">一句话记忆</span>
+      <p><b>要震撼</b>选 3D，<b>要亲和</b>选手绘，<b>要推导</b>选公式，<b>要讲结构</b>选信息图，<b>讲历史</b>选档案，<b>看作品</b>选美术馆。</p>
+    </div>
+
+    <div class="styles">
+
+      <div class="style">
+        <div class="style-head"><span class="letter">A</span><h3>3D 数据</h3></div>
+        <p class="style-fit">数据新闻、行业报告、财报、产品发布</p>
+        <div class="style-case">SpaceX Q3 财报（10 秒）：AI 业务收入同比 +830%，数字滚动，柱体从网格地面升起</div>
+        <div class="style-shot"><img src="assets/cases/a-3d.gif" alt="3D 数据风格案例：SpaceX Q3 财报"></div>
+        <div class="style-foot">
+          <details><summary>看提示词</summary>
+            <div class="style-prompt">用knowledege视频skill，请帮我设计一个 SpaceX Q3 的财报，选择 3D 数据风格。</div>
+          </details>
+          <button class="btn" data-copy="用knowledege视频skill，请帮我设计一个 SpaceX Q3 的财报，选择 3D 数据风格。" data-label="已复制，去对话框粘贴">复制提示词</button>
+        </div>
+      </div>
+
+      <div class="style">
+        <div class="style-head"><span class="letter">B</span><h3>手绘涂鸦</h3></div>
+        <p class="style-fit">观点故事、读书笔记、心理与人文</p>
+        <div class="style-case">入境数据（10 秒）：四个手绘小人逐个出现，再把「其中 3 位免签」和 77.5% 画出来</div>
+        <div class="style-shot"><img src="assets/cases/b-hand.gif" alt="手绘涂鸦风格案例：入境数据"></div>
+        <div class="style-foot">
+          <details><summary>看提示词</summary>
+            <div class="style-prompt">用knowledege视频skill，请帮我设计一个「每 4 位入境外国人里有几位不用签证」的数据，选择手绘涂鸦风格。</div>
+          </details>
+          <button class="btn" data-copy="用knowledege视频skill，请帮我设计一个「每 4 位入境外国人里有几位不用签证」的数据，选择手绘涂鸦风格。" data-label="已复制，去对话框粘贴">复制提示词</button>
+        </div>
+      </div>
+
+      <div class="style">
+        <div class="style-head"><span class="letter">C</span><h3>数学公式</h3></div>
+        <p class="style-fit">数学、物理、算法与逐步推导</p>
+        <div class="style-case">欧拉公式（15 秒）：单位圆上「乘 i 左转 90°」，复利逼近到 e<sup>iπ</sup> ≈ −1</div>
+        <div class="style-shot"><img src="assets/cases/c-formula.gif" alt="数学公式风格案例：欧拉公式"></div>
+        <div class="style-foot">
+          <details><summary>看提示词</summary>
+            <div class="style-prompt">用knowledege视频skill，请帮我设计一个欧拉公式的讲解，选择数学公式风格。</div>
+          </details>
+          <button class="btn" data-copy="用knowledege视频skill，请帮我设计一个欧拉公式的讲解，选择数学公式风格。" data-label="已复制，去对话框粘贴">复制提示词</button>
+        </div>
+      </div>
+
+      <div class="style">
+        <div class="style-head"><span class="letter">D</span><h3>信息图</h3></div>
+        <p class="style-fit">流程、方法、系统架构与产品功能</p>
+        <div class="style-case">SpaceX 五步法（10 秒）：蓝图卡片依次贴出，划掉的打红叉，左上角走步骤序号</div>
+        <div class="style-shot"><img src="assets/cases/d-infographic.gif" alt="信息图风格案例：SpaceX 五步法"></div>
+        <div class="style-foot">
+          <details><summary>看提示词</summary>
+            <div class="style-prompt">用knowledege视频skill，请帮我设计一个 SpaceX 系统设计的五步法，选择信息图风格。</div>
+          </details>
+          <button class="btn" data-copy="用knowledege视频skill，请帮我设计一个 SpaceX 系统设计的五步法，选择信息图风格。" data-label="已复制，去对话框粘贴">复制提示词</button>
+        </div>
+      </div>
+
+      <div class="style">
+        <div class="style-head"><span class="letter">E</span><h3>复古档案</h3></div>
+        <p class="style-fit">历史人物、事件、品牌与老物件</p>
+        <div class="style-case">拿破仑（22 秒）：丝带横幅标地名年份，黄铜铭牌滚动计数 60+ 场战役</div>
+        <div class="style-shot"><img src="assets/cases/e-archive.gif" alt="复古档案风格案例：拿破仑"></div>
+        <div class="style-foot">
+          <details><summary>看提示词</summary>
+            <div class="style-prompt">用knowledege视频skill，请帮我设计一个拿破仑一生打过多少场战役，选择复古档案风格。</div>
+          </details>
+          <button class="btn" data-copy="用knowledege视频skill，请帮我设计一个拿破仑一生打过多少场战役，选择复古档案风格。" data-label="已复制，去对话框粘贴">复制提示词</button>
+        </div>
+      </div>
+
+      <div class="style">
+        <div class="style-head"><span class="letter">F</span><h3>美术馆</h3></div>
+        <p class="style-fit">名画、文物、设计、建筑与摄影</p>
+        <div class="style-case">蒙娜丽莎（32 秒）：铜圈镜片压上去，把眼部细节放大</div>
+        <div class="style-shot"><img src="assets/cases/f-gallery.gif" alt="美术馆风格案例：蒙娜丽莎"></div>
+        <div class="style-foot">
+          <details><summary>看提示词</summary>
+            <div class="style-prompt">用knowledege视频skill，请帮我设计一个蒙娜丽莎为什么没有眉毛，选择美术馆风格。</div>
+          </details>
+          <button class="btn" data-copy="用knowledege视频skill，请帮我设计一个蒙娜丽莎为什么没有眉毛，选择美术馆风格。" data-label="已复制，去对话框粘贴">复制提示词</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="tip">
+      <b>方法二（有自己稿子时）：</b>如果你已经写好文稿、有音频，或者心里有想要的风格，
+      就别用默认风格，直接把素材一起给它：
+      <div class="copybox" style="margin:12px 0 0">
+        <div class="copybox-head">
+          <span class="step-badge">方法二</span>
+          <span class="grow">带口播稿 / 音频 / 参考图</span>
+          <button class="btn" data-copy="用knowledege 视频skill，帮我做一个知识动画，我的口播稿/音频是__，想要的风格参考这张图片，不要用默认风格" data-label="已复制">复制提示词</button>
+        </div>
+        <pre>用knowledege 视频skill，帮我做一个知识动画，我的口播稿/音频是__，想要的风格参考这张图片，不要用默认风格</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 提示词速查 ============ -->
+  <section id="prompts">
+    <h2><span class="num">04</span>提示词速查</h2>
+    <p class="sec-intro">所有能直接用的句子汇总在这里，点一下复制，粘到对话框改几个词就能用。</p>
+
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>场景</th><th>提示词</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr>
+            <td data-label="场景">最快出片</td>
+            <td data-label="提示词"><code>为我用knowledege视频skill，做一个解释欧拉公式的原理的动画，使用默认风格</code></td>
+            <td data-label="说明">只换主题词</td>
+          </tr>
+          <tr>
+            <td data-label="场景">带口播稿</td>
+            <td data-label="提示词"><code>用knowledege 视频skill，帮我做一个知识动画，我的口播稿/音频是__，想要的风格参考这张图片，不要用默认风格</code></td>
+            <td data-label="说明">把下划线换成你的内容</td>
+          </tr>
+          <tr>
+            <td data-label="场景">确认分镜</td>
+            <td data-label="提示词"><code>可以，请帮我开始制作</code></td>
+            <td data-label="说明">分镜没问题就回这句</td>
+          </tr>
+          <tr>
+            <td data-label="场景">指定风格</td>
+            <td data-label="提示词"><code>用knowledege视频skill，请帮我设计一个【主题】，选择【风格名】风格。</code></td>
+            <td data-label="说明">风格名见第 03 节</td>
+          </tr>
+          <tr>
+            <td data-label="场景">装 Skill</td>
+            <td data-label="提示词"><code>帮我安装这个skill，安装完之后完成自查，并给我反馈完成情况</code></td>
+            <td data-label="说明">配合上一行地址，分两次粘</td>
+          </tr>
+          <tr>
+            <td data-label="场景">存成自己的</td>
+            <td data-label="提示词"><code>帮我把这个模板存为一个skill，下次可以复用</code></td>
+            <td data-label="说明">做完自定义风格后用</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <p><b>小技巧：</b>提示词里「knowledege」是 Skill 的名字，<b>照抄别改</b>（这是它注册的名称）；要改的是你后面的主题描述。</p>
+    </div>
+  </section>
+
+  <!-- ============ 自定义风格 ============ -->
+  <section id="custom">
+    <h2><span class="num">05</span>想做自己的风格</h2>
+    <p class="sec-intro">如果你有喜欢的风格参考图或视频，它能帮你拆解成一套可复用的模板。</p>
+
+    <div class="note">
+      <b>操作：</b>复制下面整段提示词 → 一起上传你选的图片或视频（一张图、几张图、一段视频链接都行）。
+    </div>
+
+    <div class="copybox long">
+      <div class="copybox-head">
+        <span class="step-badge">进阶</span>
+        <span class="grow">自定义风格 · 七块结构模板</span>
+        <button class="btn" data-copy="帮我参考这个提示词结构，参考我给的素材设计一个新的风格【记得上传你选好的图片或者视频】
+
+## 1. 规格定尺寸
+- 比例：16:9 / 9:16 / 1:1
+- 帧率：30fps；时长以配音为准
+- 输出：MP4（H.264），音频 AAC
+
+## 2. 风格定长相
+- 主色 3～5 个，写出色值（如 #0B1E3F）
+- 背景：纯色 / 渐变 / 纹理
+- 质感：扁平 / 立体光影 / 玻璃 / 纸张 / 线稿
+- 字体气质：粗黑 / 圆体 / 手写 / 衬线
+- 构图特点：留白多少、元素密度、居中还是偏置
+
+## 3. 节奏定时间
+- 每个镜头 3～5 秒
+- 一个画面最多同时展示 5～7 个信息块
+
+## 4. 画面定动作
+- 主角元素怎么动：从哪来、到哪去、多长时间
+- 口播里的数字和关键词必须出现在画面上
+- 转场方式
+
+## 5. 音乐定情绪
+- 背景音乐风格和 BPM
+- 音效：什么时候用什么音
+- 背景音乐音量压到人声的 15%～25%，结尾 1 秒淡出
+
+## 6. 工具定实现
+- 用什么工具和库来做
+- 动画怎么写（spring / interpolate）
+
+## 7. 交付定检查
+- 文字有没有溢出或被截断
+- 配色是不是所有镜头都统一
+- 按交付前检查清单逐项确认" data-label="已复制">复制整段</button>
+      </div>
+      <pre>帮我参考这个提示词结构，参考我给的素材设计一个新的风格【记得上传你选好的图片或者视频】
+
+## 1. 规格定尺寸
+- 比例：16:9 / 9:16 / 1:1
+- 帧率：30fps；时长以配音为准
+- 输出：MP4（H.264），音频 AAC
+
+## 2. 风格定长相
+- 主色 3～5 个，写出色值（如 #0B1E3F）
+- 背景：纯色 / 渐变 / 纹理
+- 质感：扁平 / 立体光影 / 玻璃 / 纸张 / 线稿
+- 字体气质：粗黑 / 圆体 / 手写 / 衬线
+- 构图特点：留白多少、元素密度、居中还是偏置
+
+## 3. 节奏定时间
+- 每个镜头 3～5 秒
+- 一个画面最多同时展示 5～7 个信息块
+
+## 4. 画面定动作
+- 主角元素怎么动：从哪来、到哪去、多长时间
+- 口播里的数字和关键词必须出现在画面上
+- 转场方式
+
+## 5. 音乐定情绪
+- 背景音乐风格和 BPM
+- 音效：什么时候用什么音
+- 背景音乐音量压到人声的 15%～25%，结尾 1 秒淡出
+
+## 6. 工具定实现
+- 用什么工具和库来做
+- 动画怎么写（spring / interpolate）
+
+## 7. 交付定检查
+- 文字有没有溢出或被截断
+- 配色是不是所有镜头都统一
+- 按交付前检查清单逐项确认</pre>
+    </div>
+
+    <h3>它会怎么处理你的素材</h3>
+    <p>它不是随便给你改改配色，而是<b>先把你这张图的视觉机制拆开</b>——哪条线是强调色、字重压到多少、底色冷到什么程度——再列一张「新旧差异」表告诉你它改了什么，最后按七块结构写成一份完整的模板文件。</p>
+    <p>这份文件就是你以后说的「我自己的风格」。想固化下来，跟它说：</p>
+
+    <div class="copybox">
+      <div class="copybox-head">
+        <span class="step-badge">固化</span>
+        <span class="grow">存成可复用的 Skill</span>
+        <button class="btn" data-copy="帮我把这个模板存为一个skill，下次可以复用" data-label="已复制">复制</button>
+      </div>
+      <pre>帮我把这个模板存为一个skill，下次可以复用</pre>
+    </div>
+
+    <figure>
+      <img src="assets/18-own-style-real-annotated.jpg" alt="自定义风格的结果：左侧上传素材与新风格命名，右侧文档面板生成可用的风格模板文件">
+      <figcaption>① 上传的素材附件　② 它给新风格起的名字和拆出来的机制　③ 右侧文档面板里已生成好可直接用的风格模板文件</figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ 避坑 ============ -->
+  <section id="pitfalls">
+    <h2><span class="num">06</span>避坑清单</h2>
+    <p class="sec-intro">四个最容易翻车的地方，都是实测踩出来的。</p>
+
+    <ul class="checklist">
+      <li><b>AI 偶尔会发挥，数字不一定对</b><span>年代、术语、数字它写出来的不保证正确。要对外发布的东西，关键处自己再核一遍。</span></li>
+      <li><b>第一次没跑通，多半是环境没配齐</b><span>不同电脑、不同工具版本效果会有差别。别怀疑自己，回头看报错就行——Node.js / Python / FFmpeg 缺哪个它会提示。</span></li>
+      <li><b>用在线配音，文稿会送到语音服务那边</b><span>没公开的内容先别直接贴。图片、字体、音乐和音效商用之前也请自己确认授权，公版图记得把署名留下。</span></li>
+      <li><b>分镜表是改稿的唯一机会</b><span>生成之后改一个数字都要重跑。确认分镜那一步多花两分钟，比出片后返工划算。</span></li>
+    </ul>
+
+    <div class="warn">
+      <b>关于公测版：</b>它不是装完就什么都不用管的独立软件。你还需要一个能运行它的工具、一份可用的模型额度，以及 Node.js、Python、FFmpeg 等运行环境。
+      装完遇到问题，把<b>报错和复现步骤</b>发给 WorkBuddy，它会帮你继续改。
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p><b>knowledge-animation-video v0.1.0 Beta · MIT License</b><br>
+    技能仓库：<a href="https://github.com/newbaisays-aigc/knowledge-animation-video" target="_blank" rel="noopener">github.com/newbaisays-aigc/knowledge-animation-video</a>　·
+    WorkBuddy：<a href="https://www.workbuddy.cn/" target="_blank" rel="noopener">workbuddy.cn</a></p>
+    <p>本文的文字、提示词和模板结构均为原创，可直接抄、直接改、拿去商用也完全没问题。<br>
+    产品安装步骤依据 WorkBuddy 官方文档整理，界面可能随版本更新。</p>
+  </footer>
+
+</div>
+
+<script>
+  // ---- 复制按钮 ----
+  document.querySelectorAll('[data-copy]').forEach(function (btn) {
+    var original = btn.textContent;
+    btn.addEventListener('click', async function () {
+      var text = btn.getAttribute('data-copy');
+      var ok = false;
+      if (navigator.clipboard && window.isSecureContext) {
+        try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {}
+      }
+      if (!ok) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { ok = document.execCommand('copy'); } catch (e) {}
+        ta.remove();
+      }
+      btn.textContent = ok ? (btn.getAttribute('data-label') || '已复制') : '复制失败，请手动复制';
+      btn.classList.toggle('done', ok);
+      window.setTimeout(function () {
+        btn.textContent = original;
+        btn.classList.remove('done');
+      }, 2200);
+    });
+  });
+
+  // ---- 步骤完成进度（本地记忆）----
+  var KEY = 'ka-tutorial-progress';
+  var bar = document.getElementById('progress-bar');
+  var txt = document.getElementById('progress-txt');
+  var steps = Array.prototype.slice.call(document.querySelectorAll('.step'));
+  var CHECK = ['已装好 WorkBuddy', '已装好 Skill', '已跑通第一条'];
+
+  function paint() {
+    var done = 0;
+    steps.forEach(function (el, i) {
+      // 注意：.step-done 是加在元素自己身上的，必须用 classList 判，
+      // 不能用 querySelector（那只会在子元素里找，导致永远是 0）
+      var on = el.classList.contains('step-done');
+      if (on) done++;
+      var btn = el.querySelector('.btn.mark');
+      if (btn) {
+        btn.textContent = on ? '✓ 已完成' : '标记完成';
+        btn.classList.toggle('done', on);
+      }
+    });
+    bar.style.width = (done / steps.length * 100) + '%';
+    txt.textContent = done === steps.length
+      ? '三步都完成了，去做第一条片吧'
+      : '进度 ' + done + '/3 · ' + CHECK[done];
+  }
+
+  steps.forEach(function (el, i) {
+    var bar2 = document.createElement('button');
+    bar2.className = 'btn sm mark';
+    bar2.type = 'button';
+    bar2.style.marginTop = '4px';
+    bar2.textContent = '标记完成';
+    bar2.addEventListener('click', function () {
+      el.classList.toggle('step-done');
+      try { localStorage.setItem(KEY, JSON.stringify(steps.map(function (s) { return s.classList.contains('step-done'); }))); } catch (e) {}
+      paint();
+    });
+    el.appendChild(bar2);
+  });
+
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (Array.isArray(saved)) {
+      steps.forEach(function (el, i) { if (saved[i]) el.classList.add('step-done'); });
+    }
+  } catch (e) {}
+  paint();
+</script>
+</body>
+</html>
