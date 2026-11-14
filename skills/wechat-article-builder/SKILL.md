@@ -2,13 +2,18 @@
 name: wechat-article-builder
 description: 将口播稿/草稿改写为微信公众号图文格式（单文件 HTML），并内置「复制全文到公众号」按钮，保证粘贴到公众号编辑器后样式不丢失（背景色、边框、卡片、表格等）。当用户要求"改为公众号图文格式"、"做成公众号文章"、"加复制按钮"、"复制到公众号"时使用。核心踩坑知识：公众号只认内联样式；div 会被剥离样式、section 也不形成可靠段落边界 → 最终必须把视觉块压平成顶层 <p>；background 简写与 border 三件套会被丢弃 → 边框必须是 border-left 这类简写、底色必须是 background-color。
 agent_created: true
+allowed-tools: Bash,Read,Write,Edit
 ---
 
 # 微信公众号图文制作 Skill
 
 ## Overview
 
-把用户的口播稿 / 资讯草稿改写为适合微信公众号发布的单文件 HTML 图文，并提供一个复制按钮。点击按钮后自动：内联化所有计算样式 → 将全部 `div` 转为 `section` → 写入剪贴板，用户可直接粘贴到公众号编辑器，格式（背景色、圆角、边框、表格、强调色）完整保留。
+把用户的口播稿 / 资讯草稿改写为适合微信公众号发布的单文件 HTML 图文，并提供一个复制按钮。点击按钮后自动：内联化所有计算样式 → 把所有视觉块**压平成顶层 `<p>`** → 自己序列化 HTML 写入剪贴板，用户可直接粘贴到公众号编辑器，格式（背景色、圆角、边框、表格、强调色）完整保留。
+
+> ⚠️ 下方「文章 HTML 结构 / 复制按钮实现（踩坑点 1–3）」是 2026-08 的第一轮方案，
+> 其中「所有 `div` → `section`」已被 2026-11 的真实粘贴反馈**推翻**（section 不形成可靠段落边界）。
+> **一律以「2026-11 实战更新」章节为准**，不要按第一轮的 `div → section` 生成新稿。
 
 ## 触发场景
 
@@ -52,7 +57,10 @@ agent_created: true
 
 ### 踩坑点 2（关键）：div 的背景色和边框会被剥离
 
-**公众号编辑器会丢弃 `div` 元素上的 `background-color` 和 `border`，但 `section` 元素的样式会被保留。** 这是本次任务中"底部灰色块丢了、绿色标题线丢了"的根因。解决方案：样式内联完成后，把所有 `div` 递归转为 `section`。
+**公众号编辑器会丢弃 `div` 元素上的 `background-color` 和 `border`，但 `section` 元素的样式会被保留。** 这是本次任务中"底部灰色块丢了、绿色标题线丢了"的根因。当时的解决方案：样式内联完成后，把所有 `div` 递归转为 `section`。
+
+> ⚠️ **此结论只解决了「样式保不保留」，没解决「段落边界」**，已被第二轮推翻。
+> 现在 `section` 只作为中间态，最终必须压平成顶层 `<p>`。见「规则 1」。
 
 ### 踩坑点 3：border 简写属性可能取不到值
 
@@ -191,11 +199,31 @@ Chrome 复制富文本时会把 `background-color` **折叠成 `background` 简�
 ## 交付物
 
 - 单文件 `wechat-article-<name>.html`（单次生成，含复制按钮）
-- 或 `wechat-article-editor.html`（可交互编辑器，用户自行填充内容）
+- ~~`wechat-article-editor.html`（可交互编辑器）~~ **文件已丢失**（2026-11-14 全盘核实），见上文；需要时从零重建
 - 修改后用 present_files 打开预览，告知用户按钮用法
+
+## 依赖
+
+- `node`：跑 `references/test_copy.js` 及工程内的 `tools_skill_copy_test.js` / `tools_skill_real_test.js`
+- 共享无头浏览器 `D:\tools\remotion\browser\chrome-headless-shell\win64\chrome-headless-shell-win64\chrome-headless-shell.exe`
+- 改完 `copy-script.js` 必须两套测试全绿才算能用；测试要把 fixture 落成文件再 `goto file://`，`page.setContent` 的 about:blank 没有 clipboard API
+
+## 借鉴自 marketplace 同类 skill 的工程约定（2026-11-14 评估）
+
+对比 `wechat-article-pro`（纯文档、零代码）与 `wechat-article-search`（搜狗微信爬虫，730 行 JS）后，**只吸收这三条**：
+
+1. **声明能力边界**：frontmatter 写 `allowed-tools`，正文写清依赖。**不写运行时不认的 metadata 字段**——声明了却不生效，比不声明更误导。
+2. **失败必须显式，不能伪装成空结果**：`wechat-article-search` 在 TLS 握手失败时 stdout 仍输出 `{"total":0,"articles":[]}`，只看结果会误判成"没有这类文章"。我们的验证脚本坚持「断言全绿才交付」，失败要打印具体原因。
+3. **不可靠字段要显式标记**：对方用 `url_resolved: false` 标明解析失败。对应我们已有的做法：图片必须逐个 HTTP 探测可达性，**断言全绿 ≠ 线上能看**，CDN 地址"形式对"不等于"路径对"。
+
+**明确不吸收**：
+
+- `wechat-article-pro` 的"在公众号后台点按钮逐段录入"路线：绕开了粘贴兼容问题，与一键复制互斥；其 3000–5000 字刘润风格商业长文也不符合「小白姐姐」人设。可借鉴的只有「开篇现象 → 洞察 → 案例 → 结论」的内容骨架和「末尾不加话题标签 / 不用大量 emoji」这类发布禁止项，且我们已有语气规范，不重复堆。
+- `wechat-article-search` 的搜狗爬虫：本机出口为美国 IP，实测 `weixin.sogou.com`、`v.sogou.com` 均 0.6 秒秒断（HTTP 000），而 `www.baidu.com`、`mp.weixin.qq.com` 均 200，属**域名级封锁，装了也跑不通**。
+- 它的硬编码 cookie（`ABTEST=7|1716888919|v1` 是 2024 年时间戳、`IPLOC=CN5101` 与实际出口矛盾）、以及 `parseRelativeTime` 按 UTC、`formatChinaDateTime` 按 UTC+8 的**时区口径不一致**，都是反面教材。
 
 ## 注意
 
 - 技术内容（大模型、协议等）先 WebSearch 核实再写，并按「信息来源标注规范」在文末列出来源（见上文）
 - 用户可能多轮迭代语气（媒体腔→博主腔→专业:口语比例），每轮直接改写文件并刷新预览
-- 编辑器页面已内置 skill 的语气规范和结构模板，用户可自行填充内容
+- 语气规范与结构模板以本文件为准；编辑器页面已丢失，不要假设它存在

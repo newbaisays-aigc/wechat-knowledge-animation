@@ -1,0 +1,20 @@
+<!DOCTYPE html><html><head><style>
+  .article-container{background:#fff;color:#123;max-width:680px;font-family:inherit}
+  .tip{background:#eef7f2;border-left:6px solid #3E8F6C;border-radius:10px;padding:18px}
+  .note{background:#fff8e6;padding:20px}
+  p{margin:0 0 14px;font-size:16px;line-height:1.7}
+  .hl{background:#d7f0e4;color:#0D1916;padding:2px 6px;border-radius:4px}
+</style></head><body>
+<div class="article-container">
+  <p>普通段落，用于确认基础样式还在。</p>
+  <div class="tip"><p>提示框第一段。</p><p>提示框第二段。</p></div>
+  <figure>
+    <img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" loading="lazy" decoding="async">
+    <figcaption>图注文字，应当独立成段。</figcaption>
+  </figure>
+  <section class="note"><p>section 第一段。</p><p>section 第二段。</p></section>
+  <ul><li>列表项一</li><li>列表项二</li></ul>
+  <p>带高亮 <span class="hl">高亮词</span> 的段落。</p>
+</div>
+<button id="copy-btn" onclick="copyArticle()">复制全文到公众号</button>
+</body></html>
