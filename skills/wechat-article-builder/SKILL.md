@@ -144,6 +144,13 @@ Chrome 复制富文本时会把 `background-color` **折叠成 `background` 简�
 
 ## 公众号文章编辑器（可交互工具）
 
+> ⚠️ **状态：文件已丢失（2026-11-14 核实）**。`wechat-article-editor.html` 在本机全盘找不到，
+> 本 skill 目录里只剩 `SKILL.md` + `references/`。下面这段是当初的设计记录，
+> **照着做等于要从零重建**。不重建的话，做新文章走「纯 HTML + 复制按钮」这条轻量路线即可，
+> 本 skill 现在完全支持（`references/copy-script.js` 已自带完整公众号兼容规则）。
+> 设计里有两条值得保留：左侧输入极简（用户只给一段内容描述，拆分交给 AI）、
+> AI 返回结构化 JSON（title/blocks/conclusion/sources）再渲染。
+
 基于本 skill 构建的可交互编辑器页面 `wechat-article-editor.html`，Notion 风格 UI。
 
 ### 编辑器工作流（简化版 —— 用户明确要求左侧极简）
