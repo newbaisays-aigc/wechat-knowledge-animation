@@ -1,6 +1,6 @@
 ---
 name: wechat-article-builder
-description: 将口播稿/草稿改写为微信公众号图文格式（单文件 HTML），并内置「复制全文到公众号」按钮，保证粘贴到公众号编辑器后样式不丢失（背景色、边框、卡片、表格等）。当用户要求"改为公众号图文格式"、"做成公众号文章"、"加复制按钮"、"复制到公众号"时使用。核心踩坑知识：公众号只认内联样式；div 会被剥离样式、section 也不形成可靠段落边界 → 最终必须把视觉块压平成顶层 <p>；background 简写与 border 三件套会被丢弃 → 边框必须是 border-left 这类简写、底色必须是 background-color。
+description: 将口播稿/草稿改写为微信公众号图文格式（单文件 HTML），并内置「复制全文到公众号」按钮，保证粘贴到公众号编辑器后样式不丢失（背景色、边框、卡片、表格等）。当用户要求"改为公众号图文格式"、"做成公众号文章"、"加复制按钮"、"复制到公众号"时使用。核心踩坑知识：公众号只认内联样式；div 会被剥离样式、section 也不形成可靠段落边界 → 最终必须把视觉块压平成顶层 <p>；background 简写与 border 三件套会被丢弃 → 边框必须是 border-left 这类简写、底色必须是 background-color。启动口令：「用 wechat-article-builder 做公众号图文」；自检口令：「跑一遍 wechat-article-builder 的自检」。
 agent_created: true
 allowed-tools: Bash,Read,Write,Edit
 ---
@@ -21,6 +21,29 @@ allowed-tools: Bash,Read,Write,Edit
 - "做一篇公众号文章"
 - "加一个复制按钮，能粘贴到公众号"
 - "粘贴到公众号后样式丢了/灰色块没了/绿色标题线没了"
+
+### 启动口令（重启 WorkBuddy 后直接说这一句）
+
+> **用 wechat-article-builder 做公众号图文**
+
+WorkBuddy 只在**启动时**扫描 `C:\Users\MSI\.workbuddy\skills\`。C 盘这个目录是目录联接，
+新建或改动 skill 后**必须重启 WorkBuddy** 才会出现在可用列表。
+
+自检口令：**跑一遍 wechat-article-builder 的自检** —— 执行
+`node D:\00WorkBuddy\.workbuddy\skills\wechat-article-builder\references\test_copy.js`，
+16 项全绿即说明 skill 已加载、复制脚本可用。做新稿子前建议先跑一次。
+
+### 文件位置
+
+| 用途 | 路径 |
+|------|------|
+| skill 本体（改这里） | `D:\00WorkBuddy\.workbuddy\skills\wechat-article-builder\` |
+| WorkBuddy 加载点（目录联接，勿直接编辑） | `C:\Users\MSI\.workbuddy\skills\wechat-article-builder\` |
+| 工程快照（随 git 走） | `D:\WorkBuddy\Claw\wechat-knowledge-animation\skills\wechat-article-builder\` |
+| 线上仓库 | `https://github.com/newbaisays-aigc/wechat-knowledge-animation` |
+
+**改完本体必须把 `SKILL.md` 同步到工程快照并提交**，否则 git 里的版本会落后；
+`references/copy-script.js` 同步改了也要一并复制过去。
 
 ## 语气规范（用户已确认的偏好）
 
