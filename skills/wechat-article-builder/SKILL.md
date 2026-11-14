@@ -41,6 +41,11 @@ WorkBuddy 只在**启动时**扫描 `C:\Users\MSI\.workbuddy\skills\`。C 盘这
 | WorkBuddy 加载点（目录联接，勿直接编辑） | `C:\Users\MSI\.workbuddy\skills\wechat-article-builder\` |
 | 工程快照（随 git 走） | `D:\WorkBuddy\Claw\wechat-knowledge-animation\skills\wechat-article-builder\` |
 | 线上仓库 | `https://github.com/newbaisays-aigc/wechat-knowledge-animation` |
+| 线上 SKILL.md（原文，推荐） | `https://raw.githubusercontent.com/newbaisays-aigc/wechat-knowledge-animation/master/skills/wechat-article-builder/SKILL.md` |
+| 线上 Pages 版 | `https://newbaisays-aigc.github.io/wechat-knowledge-animation/skills/wechat-article-builder/SKILL.html` |
+
+> ⚠️ Pages 走 Jekyll，会把 `.md` 渲染成 `.html`：**Pages 上 `SKILL.md` 是 404，必须写 `SKILL.html`**（已实测 200）。
+> 要拿原始 Markdown 文本用 raw.githubusercontent.com，别用 Pages。
 
 **改完本体必须把 `SKILL.md` 同步到工程快照并提交**，否则 git 里的版本会落后；
 `references/copy-script.js` 同步改了也要一并复制过去。
