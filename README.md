@@ -304,6 +304,35 @@ python -m http.server 8000
 
 > 与 `index.html`（原文版）、`wechat.html`（公众号粘贴版）三份并存，各有用途。
 
+## 公众号制作 Skill（wechat-article-builder）
+
+`skills/wechat-article-builder/` 是本机 skill 的**版本化副本**（真正生效的位置在
+`D:\00WorkBuddy\.workbuddy\skills\wechat-article-builder\`，已通过目录联接挂到
+`C:\Users\MSI\.workbuddy\skills\`，WorkBuddy 才能加载）。
+
+这个 skill 负责：口播稿/草稿 → 公众号单文件 HTML + 「复制全文到公众号」按钮。
+
+2026-11-14 更新了一轮（把 11 月实战踩坑回写进 skill），核心变化：
+
+| 变化 | 说明 |
+|---|---|
+| 压平成顶层 `<p>` | section 也不形成可靠段落边界，容器样式迁移到首个子块后拆掉容器 |
+| 只采 `background-color` | `background` 简写会被覆盖成透明且公众号不认 |
+| 边框输出方向简写 | Chrome 的 cssText 会把边框折叠回 `border-width/style/color` 三件套，序列化时还原成 `border-left: ...` |
+| 自己序列化 HTML 写剪贴板 | Chrome 复制富文本会把 `background-color` 折叠成 `background` 简写，绕开它 |
+| 去 `loading="lazy"` | 视口外的图不发起请求，实测裂图 |
+| `font-family: inherit` 丢弃 | 否则整条 style 失效，连底色一起丢 |
+
+验证：
+
+```bash
+node skills/wechat-article-builder/references/test_copy.js   # 16 项断言（fixture）
+node tools_skill_copy_test.js                                 # 同上，工程内副本
+node tools_skill_real_test.js                                 # 拿本文 index.html 真跑一遍，15 项
+```
+
+> 改 skill 之后**两个测试都要跑**，全绿才算能用。改了 skill 本体记得同步回 `skills/wechat-article-builder/` 快照。
+
 ## 封面图
 
 `assets/cover/` 下有三张成品 + 可复现的生成脚本：
