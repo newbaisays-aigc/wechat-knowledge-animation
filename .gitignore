@@ -3,6 +3,7 @@ __pycache__/
 _sandbox*.html
 _sandbox*.png
 _verify_clip.html
+_skill_fixture.html
 _zoom_*.png
 _cdn_*.html
 _user_zoom*.png
